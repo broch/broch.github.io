@@ -110,7 +110,7 @@ myAppRouter path = case path of
   _           -> notFound
 ```
 
-and the router will give us a handler which we can run for a specific request. The type is `Handler ()` since the handler doesn't return anything. The `ResponseState` retrieved from the State monad gives us all we need to send the response.
+For a given request, the router will give us a corresponding handler which we can run. The type is `Handler ()` since the handler doesn't return anything. The `ResponseState` retrieved from the State monad gives us all we need to send the response.
 
 ### Running the Handler
 
@@ -174,7 +174,7 @@ runHandler req h  = do
     (result, res) <- runStateT (runReaderT (runEitherT h) rd) initRes
     let hdrs = resHeaders res
     return $ case result of
-        Left ResponseComplete   -> responseLBS (resStatus res) hdrs (resBody res)
+        Left ResponseComplete   -> responseLBS (resStatus res) hdrs (content res)
         Left (Redirect url)     -> responseLBS status302 ((hLocation, url) : hdrs) ""
         Left (HandlerError msg) -> responseLBS internalServerError500 hdrs (BL.fromStrict msg)
         Right _ -> error "Not handled"
@@ -187,7 +187,7 @@ The function [`parseRequestBody`](https://github.com/yesodweb/wai/blob/wai-extra
 
 [wai-extra]: http://hackage.haskell.org/package/wai-extra
 
-Note that we're taking the approach that *all* responses should short-circuit and we just call `error` if the handler doesn't redirect, write a response or return an error message. This might be confusing if you're used to the `Left` constructor of `Either` being the "error" case, but it's really just the case that short-circuits [^scotty-error].
+Note that we're taking the approach that *all* responses should short-circuit and assume it's a programmer error if the handler doesn't redirect, write a response or return an error message. This might be confusing if you're used to the `Left` constructor of `Either` being the "error" case, but it's really just the case that short-circuits [^scotty-error].
 
 [^scotty-error]: It's also confusing that the naming conventions often reinforce this. For example, Scotty's [`ActionError`](https://github.com/scotty-web/scotty/blob/0.9.0/Web/Scotty/Internal/Types.hs#L76) type deals with both redirects and errors.
 
@@ -245,7 +245,7 @@ redirect = throwError . Redirect
 
 The `runHandler` function we wrote above does the rest of the work, setting the status code to 302 and the `Location` header to the supplied URL.
 
-Setting the response status in general is easily done by changing the state:
+Setting the response status to a different value is easily done by changing the state:
 
 ``` haskell
 status :: Status -> Handler ()
@@ -270,7 +270,7 @@ html :: Html -> Handler ()
 html h = setContentType "text/html" >> (rawBytes $ renderHtml h)
 
 rawBytes :: BL.ByteString -> Handler ()
-rawBytes b = (modify $ \rs -> rs { resBody = b }) >> throwError ResponseComplete
+rawBytes b = (modify $ \rs -> rs { content = b }) >> throwError ResponseComplete
 
 setHeader :: HeaderName -> ByteString -> Handler ()
 setHeader name value = modify $ \rs -> rs { resHeaders = (name, value) : (resHeaders rs) }
@@ -280,14 +280,33 @@ setContentType t = setHeader "Content-Type" t
 
 ```
 
+## Exception Handling
+
+So far we've assumed that every `Handler` will produce a value of type `Either HandlerResult ()`, but what happens if the code throws an exception instead? We can test this easily by just adding the following route to our `myAppRouter` above:
+
+``` haskell
+["eek"]  -> error "eek!"
+```
+
+Requesting the URL `/eek` from a browser returns the text response "Something went wrong" with a 500 response code. This is the default response produced by Warp's internal error handler and it is easily customized [^warp-exception]. Alternatively we can catch the exception ourselves. We still need a function to convert our router into an `Application`, so we can do it there
+
+``` haskell
+
+routerToApplication :: Router -> Application
+routerToApplication route req respond =
+  (runHandler req $ route pathInfo req)
+    `catch` λ(e :: SomeException) -> return $ responseLBS internalServerError500 [] $ "Internal error"
+
+```
+
+[^warp-exception]: The [`setOnExceptionResponse`](http://hackage.haskell.org/package/warp-3.0.5/docs/Network-Wai-Handler-Warp.html#v:setOnExceptionResponse) setting can be used for customization. The exception is caught and the response sent in the [`serveConnection`](https://github.com/yesodweb/wai/blob/warp/3.0.5/warp/Network/Wai/Handler/Warp/Run.hs#L282) function. The exception is then re-thrown to the `fork` function which [calls the exception handler](https://github.com/yesodweb/wai/blob/warp/3.0.5/warp/Network/Wai/Handler/Warp/Run.hs#L256) configured with [`setOnException`](http://hackage.haskell.org/package/warp-3.0.5/docs/Network-Wai-Handler-Warp.html#v:setOnException) and cleans up resources.
+
 
 ### Other Considerations
 
 - Request body limiting: https://github.com/yesodweb/yesod/blob/yesod-core/1.4.6/yesod-core/Yesod/Core/Internal/Request.hs#L55
 
 ### Notes
-
-Warp has a default exception response which can be set as an alternative to a built-on 'catch'.
 
 Comment on ideas of a standard web API - cf servlet API. WAI is really just an API used by warp. Frameworks don't really expose this API to user code anyway.
 
