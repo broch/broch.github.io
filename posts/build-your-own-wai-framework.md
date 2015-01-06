@@ -59,12 +59,15 @@ The handler monad provides convenient (read-only) access to the request (headers
 [^apiary-action]: For an example which builds its own monad from scratch, see Apiary's [`ActionT`](http://hackage.haskell.org/package/apiary-1.2.0/docs/src/Control-Monad-Apiary-Action-Internal.html#ActionT) or Simple's [`ControllerT`](https://github.com/alevy/simple/blob/v0.9.0.0/simple/src/Web/Simple/Controller/Trans.hs#L51).
 
 ``` haskell
+{-# LANGUAGE OverloadedStrings #-}
+
 import Control.Monad.Reader
 import Control.Monad.State
-import Data.Map.Strict
-import Data.Text
-import Network.HTTP.Types
-import Network.Wai
+import Data.Map.Strict (Map)
+import Data.Text (Text)
+import qualified Data.ByteString.Lazy as BL
+import Network.HTTP.Types (ResponseHeaders, Status)
+import Network.Wai (Request)
 
 
 type Params = Map Text [Text]
@@ -78,7 +81,7 @@ data RequestData = RequestData
 data ResponseState = ResponseState
     { resStatus :: Status
     , resHeaders :: ResponseHeaders
-    , content :: ByteString
+    , content :: BL.ByteString
     }
 
 type Handler a = ReaderT RequestData (StateT ResponseState IO) a
@@ -136,10 +139,10 @@ So how do we make our monad short-circuit? One option is to add the `EitherT` mo
 
 
 ``` haskell
-HandlerResult = Redirect ByteString     -- Redirect to a URL
-              | ResponseComplete        -- Send the response
-              | HandlerError ByteString -- Send an internal error response
-                deriving (Show, Eq)
+data HandlerResult = Redirect ByteString     -- Redirect to a URL
+                   | ResponseComplete        -- Send the response
+                   | HandlerError ByteString -- Send an internal error response
+                     deriving (Show, Eq)
 
 type Handler a = EitherT HandlerResult (ReaderT RequestData (StateT ResponseState IO)) a
 ```
@@ -158,13 +161,12 @@ The complete `runHandler` function looks like this:
 
 
 ``` haskell
--- TODO: Add extra imports
 import Network.Wai.Parse
 
 runHandler :: Request -> Handler () -> IO Response
 runHandler req h  = do
     (pParams, _) <- parseRequestBody lbsBackEnd req
-    let initRes = ResponseState status200 [] "" initSesh
+    let initRes = ResponseState status200 [] ""
         rd = RequestData
               { waiReq      = req
               , queryParams = toMap $ fmap (\(n, v) -> (n, fromMaybe "" $ v)) $ queryString req
@@ -209,19 +211,16 @@ queryParam :: Text -> Handler Text
 queryParam name = asks queryParams >>= lookupParam name
 
 lookupParam :: Text -> Params -> Handler Text
-lookupParam name params = do
-    case M.lookup name params of
-        Just [v] -> return v
-        _        -> throwError $ HandlerError $ B.concat ["Missing or duplicate parameter", TE.encodeUtf8 name]
+lookupParam name params = case M.lookup name params of
+    Just [v] -> return v
+    _        -> throwError $ HandlerError $ B.concat ["Missing or duplicate parameter", TE.encodeUtf8 name]
 ```
 
-WAI's `Request` record type has a field called `requestBody` which is of type `IO ByteString`. It produces the complete body a chunk at a time, returning an empty `ByteString` when the body is completely consumed. There's also provides a convenience function to do this, which we can wrap to create our `body` function:
+WAI's `Request` record type has a field called `requestBody` which is of type `IO ByteString`. It produces the complete body a chunk at a time, returning an empty `ByteString` when the body is completely consumed. There's also a convenience function to do this, which we can wrap to create our `body` function:
 
 ``` haskell
-import qualified Data.ByteString.Lazy as BL
-
 body :: Handler BL.ByteString
-body = liftIO . strictRequestBody
+body = asks waiReq >>= liftIO . strictRequestBody
 ```
 
 Note that the body can only be read once. It may already have been read by the function `parseRequestBody` which we used above and in that case, the `body` function would return an empty value [^scotty-body].
@@ -256,7 +255,6 @@ and we can write the response content as text, JSON or (Blaze) HTML using the fo
 
 ``` haskell
 import Data.Aeson
-import qualified Data.ByteString.Lazy as BL
 import Text.Blaze.Html (Html)
 import Text.Blaze.Html.Renderer.Utf8 (renderHtml)
 
@@ -264,20 +262,19 @@ text :: Text -> Handler ()
 text t = setContentType "text/plain; charset=utf-8" >> (rawBytes . BL.fromStrict $ TE.encodeUtf8 t)
 
 json :: ToJSON a => a -> Handler ()
-json j = setContentType "application/json" >> (rawBytes $ encode j)
+json j = setContentType "application/json" >> rawBytes (encode j)
 
 html :: Html -> Handler ()
-html h = setContentType "text/html; charset=utf-8" >> (rawBytes $ renderHtml h)
+html h = setContentType "text/html; charset=utf-8" >> rawBytes (renderHtml h)
 
 rawBytes :: BL.ByteString -> Handler ()
-rawBytes b = (modify $ \rs -> rs { content = b }) >> throwError ResponseComplete
+rawBytes b = modify (\rs -> rs { content = b }) >> throwError ResponseComplete
 
 setHeader :: HeaderName -> ByteString -> Handler ()
-setHeader name value = modify $ \rs -> rs { resHeaders = (name, value) : (resHeaders rs) }
+setHeader name value = modify $ \rs -> rs { resHeaders = (name, value) : resHeaders rs }
 
 setContentType :: ByteString -> Handler ()
-setContentType t = setHeader "Content-Type" t
-
+setContentType = setHeader "Content-Type"
 ```
 
 ## Exception Handling
@@ -288,7 +285,7 @@ So far we've assumed that every `Handler` will produce a value of type `Either H
 ["eek"]  -> error "eek!"
 ```
 
-Requesting the URL `/eek` from a browser returns the text response "Something went wrong" with a 500 response code. This is the default response produced by Warp's internal error handler and it is easily customized [^warp-exception]. Alternatively we can catch the exception ourselves. We still need a function to convert our router into an `Application`, so we can do it there
+Requesting the URL `/eek` from a browser returns the text response "Something went wrong" with a 500 response code. This is the default response produced by Warp's internal error handler and it is easily customized [^warp-exception]. Alternatively we can catch the exception ourselves. We still need a function to convert our router into an `Application`, so we can do it there:
 
 ``` haskell
 
