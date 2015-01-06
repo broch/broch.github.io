@@ -261,13 +261,13 @@ import Text.Blaze.Html (Html)
 import Text.Blaze.Html.Renderer.Utf8 (renderHtml)
 
 text :: Text -> Handler ()
-text t = setContentType "text/plain" >> (rawBytes . BL.fromStrict $ TE.encodeUtf8 t)
+text t = setContentType "text/plain; charset=utf-8" >> (rawBytes . BL.fromStrict $ TE.encodeUtf8 t)
 
 json :: ToJSON a => a -> Handler ()
 json j = setContentType "application/json" >> (rawBytes $ encode j)
 
 html :: Html -> Handler ()
-html h = setContentType "text/html" >> (rawBytes $ renderHtml h)
+html h = setContentType "text/html; charset=utf-8" >> (rawBytes $ renderHtml h)
 
 rawBytes :: BL.ByteString -> Handler ()
 rawBytes b = (modify $ \rs -> rs { content = b }) >> throwError ResponseComplete
