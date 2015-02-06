@@ -15,10 +15,11 @@ Whether you need to use an additional framework on top of WAI will very much dep
 [spock]: http://hackage.haskell.org/package/spock
 [yesod]: http://www.yesodweb.com/
 [simple]: http://hackage.haskell.org/package/simple
+[wheb]: http://hackage.haskell.org/package/Wheb
 
-[^warp-dos]: Warp doesn't automatically limit the request size, for example, so someone can crash your application by sending a very large request. For example, you can use the curl command `curl -v --data-urlencode 'username@my_giant_file.txt' localhost:3000/login` to send a large file as a parameter. See also, Yesod's `maximumContentLength` setting.
+[^warp-dos]: Warp doesn't automatically limit the request size, for example, so someone can crash your application by sending a very large request. For example, you can use the curl command `curl -v --data-urlencode 'username@my_giant_file.txt' localhost:3000/login` to send a large file as a parameter. See also, Yesod's `maximumContentLength` setting, which it uses to [limit the request body size](https://github.com/yesodweb/yesod/blob/yesod-core/1.4.6/yesod-core/Yesod/Core/Internal/Request.hs#L55).
 
-[^wai-frameworks]: [Scotty][scotty], [Yesod][yesod], [Hails](http://hackage.haskell.org/package/hails), [Apiary](http://hackage.haskell.org/package/apiary), [Spock](http://hackage.haskell.org/package/Spock), [Simple][simple]. For a more complete list, you can look through [Warp's reverse dependencies](http://packdeps.haskellers.com/reverse/warp).
+[^wai-frameworks]: [Scotty][scotty], [Yesod][yesod], [Hails](http://hackage.haskell.org/package/hails), [Apiary](http://hackage.haskell.org/package/apiary), [Spock](http://hackage.haskell.org/package/Spock), [Wheb][wheb], [Simple][simple]. For a more complete list, you can look through [Warp's reverse dependencies](http://packdeps.haskellers.com/reverse/warp).
 
 ### Basic WAI
 
@@ -93,7 +94,7 @@ type Handler a = ReaderT RequestData (StateT ResponseState IO) a
 
 ### Routing
 
-Our application will consist of request handler functions written in the `Handler` monad. We also need some way of mapping different requests to the correct handlers.
+Our application will consist of request handler functions written in the `Handler` monad. We also need some way of mapping different requests to the correct handlers. Frameworks generally include a DSL to do this, often using Sinatra-style verb/path combinations, including support for capturing URL parameters and converting parameters to specific types. You can also find separate routing libraries on Hackage.
 
 A very simple routing option is to just pattern match on the `pathInfo` property of the WAI `Request`, which is of type `[Text]`:
 
@@ -299,11 +300,12 @@ routerToApplication route req respond =
 [^warp-exception]: The [`setOnExceptionResponse`](http://hackage.haskell.org/package/warp-3.0.5/docs/Network-Wai-Handler-Warp.html#v:setOnExceptionResponse) setting can be used for customization. The exception is caught and the response sent in the [`serveConnection`](https://github.com/yesodweb/wai/blob/warp/3.0.5/warp/Network/Wai/Handler/Warp/Run.hs#L282) function. The exception is then re-thrown to the `fork` function which [calls the exception handler](https://github.com/yesodweb/wai/blob/warp/3.0.5/warp/Network/Wai/Handler/Warp/Run.hs#L256) configured with [`setOnException`](http://hackage.haskell.org/package/warp-3.0.5/docs/Network-Wai-Handler-Warp.html#v:setOnException) and cleans up resources.
 
 
-### Other Considerations
+## Conclusion
 
-- Request body limiting: https://github.com/yesodweb/yesod/blob/yesod-core/1.4.6/yesod-core/Yesod/Core/Internal/Request.hs#L55
+We now have a simple set of functions with which we can write web handlers which would look similar to those of a framework like Scotty. You can see this kind of code in use in a project I've been working on which is an implementation of the [OpenID Connect specification][openid-connect] in Haskell [^broch].
 
-### Notes
+[^broch]: TODO
+[openid-connect]: http://openid.net/developers/specs/
 
 Comment on ideas of a standard web API - cf servlet API. WAI is really just an API used by warp. Frameworks don't really expose this API to user code anyway.
 
