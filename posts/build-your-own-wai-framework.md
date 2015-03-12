@@ -200,9 +200,9 @@ The handler monad is not very useful by itself. We want to hide the details behi
 
 #### Reading the request
 
-When processing a request, we typically want to read parameters and/or the request body. Most frameworks do not differentiate between different types of request parameters, but let's suppose we want to treat request body parameters from query string parameters [^sec-param]. We'll also assume that it's an error to send duplicate values of the same parameter:
+When processing a request, we typically want to read parameters and/or the request body. Most frameworks do not differentiate between different types of request parameters, but let's suppose we want to treat request body parameters separately from query string parameters [^sec-param]. We'll also assume that it's an error to send duplicate values of the same parameter:
 
-[^sec-param]: We might want to report an error if sensitive data like a password is sent in a URL, for example. We couldn't do this using Scotty's `param` function, for instance.
+[^sec-param]: For example, we might want to report an error if sensitive data like a password is sent in a URL. We couldn't do this using Scotty's `param` function, for instance.
 
 ``` haskell
 postParam :: Text -> Handler Text
@@ -308,4 +308,3 @@ We now have a simple set of functions with which we can write web handlers which
 [openid-connect]: http://openid.net/developers/specs/
 
 Comment on ideas of a standard web API - cf servlet API. WAI is really just an API used by warp. Frameworks don't really expose this API to user code anyway.
-
