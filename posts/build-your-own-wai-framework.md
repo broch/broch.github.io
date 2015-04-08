@@ -7,19 +7,19 @@ tags: haskell,wai
 
 This article shows how you can build on top of the basic request/response handling functionality provided by [WAI][wai] and the [Warp server][warp], to support some of the requirements you might have in a typical web application. The content is mostly gleaned from my research into the code of several WAI-based web frameworks to try to understand how they work. Building a web application was one of the things I tackled when I didn't really know Haskell well enough, so hopefully this will be useful if you're at a similar stage and would like to understand what's going on in a bit more depth. I'll outline some of the features these frameworks add, build a similar (but simplified) implementation, and also provide links to the source code of some real-world frameworks built on WAI (such as [Scotty][scotty], [Spock][spock] and [Yesod][yesod]) for comparison.
 
-Whether you need to use an additional framework on top of WAI will very much depend on your requirements and whether you want to track the extra dependencies in your project. Frameworks cater for general cases (making the types more complex for a beginner) and they have a lot of features. For a simple application, you may want to avoid the extra complexity and you might get by with something like what we have here. On the other hand, you might overlook something important which the framework authors didn't [^warp-dos] - the code in this article is only meant to be a rough outline. If you *do* decide to "build your own," please think hard before releasing it to Hackage. There are more than enough WAI frameworks out there already [^wai-frameworks].
+Whether you need to use an additional framework on top of WAI will very much depend on your requirements, how complicated your application is and whether you want to track the extra dependencies in your project. Frameworks cater for general cases (making the types more complex for a beginner) and they have a lot of features. You should certainly try out something like Spock or Scotty as they are easy to get started with. For a simple application, or one where you need finer control over handling requests, you might then consider a customized approach. On the other hand, you might overlook something important which the framework authors didn't [^warp-dos] --- the code in this article is only meant to be a rough outline. If you *do* decide to "build your own," please think hard before releasing it to Hackage. There are more than enough WAI frameworks out there already [^wai-frameworks].
 
 [wai]: http://hackage.haskell.org/package/wai
 [warp]: http://hackage.haskell.org/package/warp
 [scotty]: http://hackage.haskell.org/package/scotty
-[spock]: http://hackage.haskell.org/package/spock
+[spock]: http://www.spock.li/
 [yesod]: http://www.yesodweb.com/
 [simple]: http://hackage.haskell.org/package/simple
 [wheb]: http://hackage.haskell.org/package/Wheb
 
 [^warp-dos]: Warp doesn't automatically limit the request size, for example, so someone can crash your application by sending a very large request. For example, you can use the curl command `curl -v --data-urlencode 'username@my_giant_file.txt' localhost:3000/login` to send a large file as a parameter. See also, Yesod's `maximumContentLength` setting, which it uses to [limit the request body size](https://github.com/yesodweb/yesod/blob/yesod-core/1.4.6/yesod-core/Yesod/Core/Internal/Request.hs#L55).
 
-[^wai-frameworks]: [Scotty][scotty], [Yesod][yesod], [Hails](http://hackage.haskell.org/package/hails), [Apiary](http://hackage.haskell.org/package/apiary), [Spock](http://hackage.haskell.org/package/Spock), [Wheb][wheb], [Simple][simple]. For a more complete list, you can look through [Warp's reverse dependencies](http://packdeps.haskellers.com/reverse/warp).
+[^wai-frameworks]: [Scotty][scotty], [Yesod][yesod], [Hails](http://hackage.haskell.org/package/hails), [Apiary](http://hackage.haskell.org/package/apiary), [Spock][spock], [Wheb][wheb], [Simple][simple]. For a more complete list, you can look through [Warp's reverse dependencies](http://packdeps.haskellers.com/reverse/warp).
 
 ### Basic WAI
 
@@ -302,9 +302,11 @@ routerToApplication route req respond =
 
 ## Conclusion
 
-We now have a simple set of functions with which we can write web handlers which would look similar to those of a framework like Scotty. You can see this kind of code in use in a project I've been working on which is an implementation of the [OpenID Connect specification][openid-connect] in Haskell [^broch].
+We now have a simple set of functions with which we can write web handlers which would look quite similar to those of a framework like Scotty, but you should now hopefully have a clearer idea of how things fit together. The code is available from the accompanying samples repository on github [TODO][TODO], on the `byowai` branch. The branch history closely follows the structure of the article.
 
-[^broch]: TODO
+For a more complex example, you can also see this kind of code in use in a project I've been working on which is an implementation of the [OpenID Connect specification][openid-connect] in Haskell [^broch]. I'll hopefully find time to write up more articles on this topic as the development proceeds.
+
+[^broch]: https://github.com/tekul/broch
 [openid-connect]: http://openid.net/developers/specs/
 
 Comment on ideas of a standard web API - cf servlet API. WAI is really just an API used by warp. Frameworks don't really expose this API to user code anyway.
