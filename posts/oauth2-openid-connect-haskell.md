@@ -7,6 +7,8 @@ tags: haskell,identity,oauth2,openid-connect
 
 I've been working on an implementation of the OpenID Connect specification. Since it was something I already knew quite a bit about from my previous job, it seemed like a good idea for a "real-world" Haskell project. The result is a project called "Broch" [^broch-origin]. Features which are implemented to various degrees include
 
+[^broch-origin]: This follows from the contrived acronym "Basic Realization of OpenID Connect in Haskell", but I chose the name first and the acronym later. If someone can think of a better one, please let me know. Brochs are tall, round iron age buildings and I enjoyed playing in the ruins of some of them when I was young. They are of simple design, solidly engineered and secure. All good goals for an identity management system to aspire to, even an implementation of OAuth2/OpenID Connect.
+
 * OAuth2 flows
   * Authorization endpoint
   * Token endpoint
@@ -19,51 +21,134 @@ I've been working on an implementation of the OpenID Connect specification. Sinc
   * [JWT Bearer authentication][jwt-bearer]
 * ID Tokens (signed and/or encrypted)
 
+[^jose-jwt]: JWTs are implemented in a separate project [`jose-jwt`](http://hackage.haskell.org/package/jose-jwt).
 
 [client-reg]: http://openid.net/specs/openid-connect-registration-1_0.html
 [jwt-bearer]: https://tools.ietf.org/html/draft-ietf-oauth-jwt-bearer-12
 
-It's still far from being a production-ready OpenID Connect Provider, but you can easily get a prototype server up and running and the plan is that everything should be easily configurable. This article is more about the Haskell implementation than the specification, so doesn't explain OAuth2 and OpenID Connect concepts in any detail.
+It's still far from being a production-ready OpenID Connect Provider, but you can easily get a prototype server up and running with default settings and the plan is that the important things should be easily configurable. This article is more about the Haskell implementation than the specification, so doesn't explain OAuth2 and OpenID Connect concepts in any detail.
 
 # A Minimal Server
 
-To run a server, you need to create a configuration instance (`Broch.Server.Config`) and pass it to the `brochServer` function. The only thing you *have to* supply is an "issuer" for the OpenID Provider. This is the external URL which your server will be visible under, for example "https://myopenidserver.com". Everything else in a simple test server can use default settings and in-memory storage.
+To run a server, you need to create a configuration instance (`Broch.Server.Config`) and pass it to the `brochServer` function. The only things you *have to* supply are
+
+* An "issuer" for the OpenID Provider. This is the external URL used to access your server, for example `https://myopenidserver.com`.
+* A user authentication function.
+* A means of supplying user account information for OpenID authentication requests.
+
+Some standard options for authentication and user management are provided -- you just need to select them in your configuration. Everything else in a simple test server can use default settings, in-memory storage and provided login handlers.
+
+The configured server is built on WAI and can be run using the warp web server:
 
 ``` haskell
 
-TODO
+import Data.Default.Generics (def)
+import qualified Data.Text as T
+import Network.Wai.Middleware.RequestLogger (logStdoutDev)
+import Network.Wai.Handler.Warp
+import Web.ClientSession (getDefaultKey)
 
+import Broch.Model (Client(..), GrantType(..), Scope(..))
+import Broch.Scim
+import Broch.Server.Config
+import Broch.Server (brochServer, authenticatedSubject, passwordLoginHandler)
+import Broch.Server.Internal (routerToApp)
+import Broch.Server.Session (defaultLoadSession)
+
+main :: IO ()
+main = do
+    csKey  <- getDefaultKey
+    inMemory <- inMemoryConfig "http://localhost:3000"
+    let config = inMemory { authenticateResourceOwner = authenticate, getUserInfo = loadUserInfo }
+    router <- brochServer config (authenticatedSubject, passwordLoginHandler (authenticateResourceOwner config))
+    let waiApp = routerToApp (defaultLoadSession 3600 csKey) (issuerUrl config) router
+    run 3000 $ logStdoutDev waiApp
+  where
+    testClient = def
+        { clientId = "123"
+        , clientSecret = Just "abc123"
+        , authorizedGrantTypes = [AuthorizationCode]
+        , redirectURIs = ["http://c123.client"]
+        , allowedScope = [OpenID]
+        }
+    authenticate username password
+        | username == password = return (Just username)
+        | otherwise            = return Nothing
+
+    loadUserInfo uid _ = return $ def
+        { sub = uid
+        , email = Just (T.concat [uid, "@someplace.com"])
+        }
 ```
 
-If you want to use a database, there's a `Persist` backend provided out of the box
+The web code is similar to that in [an earlier article on WAI](http://broch.io/posts/build-your-own-wai-framework/), but also includes the concept of a session, since users have to be able to authenticate to the authorization server [^default-session]. The `brochServer` function converts the configuration into a routing table of handler functions. This is then converted into a WAI `Application`.
+
+We've added a single client which is allowed to use the authorization code flow and will use basic authentication at the token endpoint.
+
+Neither OAuth2 nor OpenID Connect define how authentication of the end user should take place at the authorization server, so user account data and authentication are decoupled from the core OpenID/OAuth2 functionality. Here we have used an authentication function which merely compares the username and password for equality, so there aren't actually any user accounts -- you can authenticate with any name. For "user info" requests, we've just added a function `loadUserInfo` to make up the data. In a real implementation, you would have a specific user data type and would write functions to manage user accounts and convert the data to the claims returned for a user info request [^user-claims]. The `Scim` module includes an out of the box option, based on the SCIM specification [^scim].
+
+[^default-session]: Here we are using the default session implementation which is based on the [`clientsession`](http://hackage.haskell.org/package/clientsession) package.
+[^scim]: The aim is to build a full implementation of [the SCIM 2 spec](http://www.simplecloud.info/), but this is a work in progress.
+[^user-claims]: OpenID Connect defines a specific set of [claims](http://openid.net/specs/openid-connect-core-1_0.html#Claims), which unfortunately aren't directly compatible with SCIM.
+
+If you want to use a database, there's a `Persist` backend provided out of the box, which uses the Scim module. We could swap from using in-memory to Persist just by using
 
 ``` haskell
-
-TODO
-
+persistConfig <- persistBackend pool <$> inMemoryConfig issuer
 ```
-
-
+where `pool` is a Persist `ConnectionPool` instance.
 
 # Configuration
 
-One of the things I struggled with initally was the best approach for building a configurable server application. It's easy enough to come up with intelligent defaults for an OpenID Provider, but pretty much all the functionality needs to be pluggable [^haskell-di]. The `Broch.Server.Config` module contains data structures for settings which are used to initialize a server, and also functions which define pluggable behaviour. For example
+One of the things I had trouble with was the finding the best approach for building a configurable server application. It's easy enough to come up with intelligent defaults for an OpenID Provider, but pretty much all the functionality needs to be pluggable [^haskell-di]. The `Broch.Server.Config` module contains data structures for settings which are used to initialize a server, and also functions which define pluggable behaviour
+
+[^haskell-di]: Functional programmers enjoy making fun of other languages and their inadequacies in this department. Just mention "dependency injection" and watch the reaction, but concrete examples of how to build a Haskell server with a pluggable configuration are rather thin on the ground, so for a beginner it's not clear where to start. If you're using a framework like Yesod, then it uses typeclasses to implement different functionality you might want in your application, and you can override specific functions if you wish. However, I'd already decided I didn't want to tie the project to any specific framework and I wasn't overly keen on typeclass-mixing. The approach I finally settled on was inspired by this [Stack Overflow answer](http://stackoverflow.com/a/14329487/241990).
 
 ``` haskell
+data Config m s = Config
+    { issuerUrl                  :: Text
+    , publicKeys                 :: [Jwk]
+    , signingKeys                :: [Jwk]
+    , responseTypesSupported     :: [ResponseType]
+    , algorithmsSupported        :: SupportedAlgorithms
+    , clientAuthMethodsSupported :: [ClientAuthMethod]
+    , claimsSupported            :: [Text]
+    , createClient               :: CreateClient m
+    , getClient                  :: LoadClient m
+    , createAuthorization        :: CreateAuthorization m s
+    , getAuthorization           :: LoadAuthorization m
+    , authenticateResourceOwner  :: AuthenticateResourceOwner m
+    , createApproval             :: CreateApproval m
+    , getApproval                :: LoadApproval m
+    , createAccessToken          :: CreateAccessToken m
+    , decodeAccessToken          :: DecodeAccessToken m
+    , decodeRefreshToken         :: DecodeRefreshToken m
+    , getUserInfo                :: LoadUserInfo m
+    }
+```
 
-TODO: Insert function types
+The functions are type aliases, for example
+``` haskell
+
+type LoadClient m = ClientId -> m (Maybe Client)
 
 ```
 
+The implementations can then be written in any way, as long as they end up satisfying the required type. They can use partial application, for example, to pass other dependencies such as connection pools.
+
 # Request Processing
 
-The majority of the functionality for processing authorization and token requests is decoupled from the HTTP interface (WAI). The web handlers extract the request data, bundle the parameters up in a map, then delegate the work to other functions.
+The majority of the functionality for processing authorization and token requests is decoupled from the HTTP interface (WAI). The web handlers extract the request data, bundle the parameters up in a map, then delegate the detailed work to other functions. This makes it easier to test the core functionality and to use it with a different web front-end.
 
 ## Authorization Endpoint
 
 The result of an authorization request can be one of
 
-TODO
+* A redirect containing the authorization information (an authorization code, access token or whatever other data is required by the grant request)
+* A redirect to enable user authentication, before continuing processing the original authorization request
+* An error returned to the user agent, due to a potentially malicious client request
+* A redirect error, where the error information is returned to the client in the URL.
+
 
 ## Token Endpoint
 
@@ -93,10 +178,3 @@ Blaze
 * Enabling/Disabling features
 * Different ID Token contents
 * Adding a standard OAuth2 protected endpoint
-
-
-[^haskell-di]: Functional programmers enjoy making fun of other languages and their inadequacies in this department. Just mention "dependency injection" and watch the reaction, but concrete examples of how to build a Haskell server with a pluggable configuration are rather thin on the ground, so for a beginner it's not clear where to start. If you're using a framework like Yesod, then it uses typeclasses to implement different functionality you might want in your application, and you can override specific functions if you wish. However, I'd already decided I didn't want to tie the project to any specific framework. The configuration approach I finally settled on was inspired by this [Stack Overflow answer](http://stackoverflow.com/a/14329487/241990).
-
-[^broch-origin]: This follows from the contrived acronym "Basic Realization of OpenID Connect in Haskell", but I chose the name first and the acronym later. If someone can think of a better one, please let me know. Brochs are tall, round iron age buildings and I enjoyed playing in the ruins of some of them when I was young. They are of simple design, solidly engineered and secure. All good goals for an identity management system to aspire to, even an implementation of OAuth2/OpenID Connect.
-
-[^jose-jwt]: JWTs are implemented in a separate project [`jose-jwt`][http://hackage.haskell.org/package/jose-jwt].
