@@ -1,13 +1,13 @@
 ---
 title: Build Your Own Haskell Web Framework on WAI
 author: Luke
-date: 2014-11-19
+date: 2015-04-19
 tags: haskell,wai
 ---
 
 This article shows how you can build on top of the basic request/response handling functionality provided by [WAI][wai] and the [Warp server][warp], to support some of the requirements you might have in a typical web application. The content is mostly gleaned from my research into the code of several WAI-based web frameworks to try to understand how they work. Building a web application was one of the things I tackled when I didn't really know Haskell well enough, so hopefully this will be useful if you're at a similar stage and would like to understand what's going on in a bit more depth. I'll outline some of the features these frameworks add, build a similar (but simplified) implementation, and also provide links to the source code of some real-world frameworks built on WAI (such as [Scotty][scotty], [Spock][spock] and [Yesod][yesod]) for comparison.
 
-Whether you need to use an additional framework on top of WAI will very much depend on your requirements, how complicated your application is and whether you want to track the extra dependencies in your project. Frameworks cater for general cases (making the types more complex for a beginner) and they have a lot of features. You should certainly try out something like Spock or Scotty as they are easy to get started with. For a simple application, or one where you need finer control over handling requests, you might then consider a customized approach. On the other hand, you might overlook something important which the framework authors didn't [^warp-dos] --- the code in this article is only meant to be a rough outline. If you *do* decide to "build your own," please think hard before releasing it to Hackage. There are more than enough WAI frameworks out there already [^wai-frameworks].
+Whether you need to use an additional framework on top of WAI will very much depend on your requirements, how complicated your application is and whether you want to track the extra dependencies in your project. Frameworks cater for general cases (making the types more complex for a beginner) and they have a lot of features. You should certainly try out something like Spock or Scotty as they are easy to get started with. For a simple application, or one where you need finer control over handling requests, you might then consider a customized approach. On the other hand, you might overlook something important which the framework authors didn't [^warp-dos] -- the code in this article is only meant to be a rough outline. If you *do* decide to "build your own," please think hard before releasing it to Hackage. There are more than enough WAI frameworks out there already [^wai-frameworks].
 
 [wai]: http://hackage.haskell.org/package/wai
 [warp]: http://hackage.haskell.org/package/warp
@@ -23,7 +23,7 @@ Whether you need to use an additional framework on top of WAI will very much dep
 
 ### Basic WAI
 
-WAI ("web application interface") is a Haskell HTTP request/response API. Theoretically it is server agnostic but in practice it is really only implemented by the warp server.
+WAI ("web application interface") is a Haskell HTTP request/response API. Theoretically it is server-agnostic but in practice it is really only implemented by the warp server.
 
 Request handling in WAI is defined by the `Application` type [^yesod-book-wai] :
 
@@ -48,7 +48,7 @@ app _ respond = respond $
 main = run 3000 app
 ```
 
-So from a web developer's perspective, a WAI application is a single function which is called for each request and sends back a response. The code runs in the IO monad and there's no out-of-the-box support for performing redirects, cookie handling, managing sessions or supporting different response types such as text, HTML or JSON. Web frameworks like Scotty and Yesod build these features on top of WAI using their own custom handler monads. They also provide some kind of routing DSL, usually based on the request path and method (GET, POST etc.), so you can map different requests to different handler functions.
+So from a web developer's perspective, a WAI application is a single function which is called for each request and sends back a response. The code runs in the IO monad and there's no out-of-the-box support for performing redirects, cookie handling, managing sessions or supporting different response types such as text, HTML or JSON. Web frameworks like Scotty and Yesod build these features on top of WAI using their own custom handler monads, meaning you won't usually call the WAI functions directly in your code. Frameworks also provide some kind of routing DSL, usually based on the request path and method (GET, POST etc.), so you can map different requests to different handler functions.
 
 [^yesod-book-wai]: For a good overview of WAI, see the [Yesod Book](http://www.yesodweb.com/book-1.4/web-application-interface).
 
@@ -94,7 +94,7 @@ type Handler a = ReaderT RequestData (StateT ResponseState IO) a
 
 ### Routing
 
-Our application will consist of request handler functions written in the `Handler` monad. We also need some way of mapping different requests to the correct handlers. Frameworks generally include a DSL to do this, often using Sinatra-style verb/path combinations, including support for capturing URL parameters and converting parameters to specific types. You can also find separate routing libraries on Hackage.
+Our application will consist of request handler functions written in the `Handler` monad. We also need some way of mapping different requests to the correct handlers. Frameworks generally include a DSL to do this, often using Sinatra-style verb/path combinations, including support for capturing URL parameters and converting parameters to specific types.
 
 A very simple routing option is to just pattern match on the `pathInfo` property of the WAI `Request`, which is of type `[Text]`:
 
@@ -114,7 +114,7 @@ myAppRouter path = case path of
   _           -> notFound
 ```
 
-For a given request, the router will give us a corresponding handler which we can run. The type is `Handler ()` since the handler doesn't return anything. The `ResponseState` retrieved from the State monad gives us all we need to send the response.
+For a given request, the router will give us a corresponding handler which we can run. The type is `Handler ()` since the handler doesn't return anything. The `ResponseState` retrieved from the State monad gives us all we need to send the response. This isn't a very flexible approach, but it's very easy to understand and fine as a first option if we don't need to be able to compose routers and so on. You can find routing packages on Hackage but that's a topic for another time.
 
 ### Running the Handler
 
@@ -302,11 +302,10 @@ routerToApplication route req respond =
 
 ## Conclusion
 
-We now have a simple set of functions with which we can write web handlers which would look quite similar to those of a framework like Scotty, but you should now hopefully have a clearer idea of how things fit together. The code is available from the accompanying samples repository on github [TODO][TODO], on the `byowai` branch. The branch history closely follows the structure of the article.
+Even though WAI is not really a standard web interface supported by multiple servers, it *is* common to multiple frameworks so an understanding WAI and Warp is useful if you are likely to be developing Haskell web applications.
 
-For a more complex example, you can also see this kind of code in use in a project I've been working on which is an implementation of the [OpenID Connect specification][openid-connect] in Haskell [^broch]. I'll hopefully find time to write up more articles on this topic as the development proceeds.
+In this article we've built a simple set of functions with which we can write web handlers which would look quite similar to those of a framework like Scotty, and you should now hopefully have a clearer idea of how they work. The code is available from the accompanying samples repository [on github](https://github.com/broch/brochio-samples/blob/byowai/ByoWai.hs), on the `byowai` branch. The branch commit history closely follows the structure of the article and should compile at each stage. For a more complex example, you can also see this kind of code in use in a project I've been working on which is an implementation of the [OpenID Connect specification][openid-connect] in Haskell [^broch]. I'll hopefully find time to write up more articles on this topic as the development proceeds.
 
-[^broch]: https://github.com/tekul/broch
 [openid-connect]: http://openid.net/developers/specs/
 
-Comment on ideas of a standard web API - cf servlet API. WAI is really just an API used by warp. Frameworks don't really expose this API to user code anyway.
+[^broch]: The project is also on [github](https://github.com/tekul/broch). It's a work in progress but also includes session handling, for example.
