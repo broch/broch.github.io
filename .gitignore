@@ -2,5 +2,7 @@
 .DS_Store
 cabal.sandbox.config
 dist/
+deploy/
 _cache
 _site
+site
