@@ -12,7 +12,7 @@ import           System.Locale (TimeLocale, defaultTimeLocale, iso8601DateFormat
 
 main :: IO ()
 main = hakyll $ do
-    match "images/*" $ do
+    match ("images/*" .||. "CNAME") $ do
         route   idRoute
         compile copyFileCompiler
 
