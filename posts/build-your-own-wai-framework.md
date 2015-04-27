@@ -186,7 +186,7 @@ toMap :: [(ByteString, ByteString)] -> Params
 toMap = M.unionsWith (++) . map (\(x, y) -> M.singleton (TE.decodeUtf8 x) [TE.decodeUtf8 y])
 ```
 
-The function [`parseRequestBody`](https://github.com/yesodweb/wai/blob/wai-extra/3.0.3/wai-extra/Network/Wai/Parse.hs#L174) is part of the [`wai-extra`][wai-extra] library. It attempts to parse the request body as [HTML Form data](http://www.w3.org/TR/html401/interact/forms.html#h-17.13.4), returning a tuple containing a list of submitted parameters and a list of uploaded files. Since we aren't supporting file uploads we ignore the second element of the tuple. If the request `content-type` is neither `application/x-www-form-urlencoded` nor `multipart/form-data`, then both these will arrays will be empty and we will have to read and parse the request body ourselves. We'll look at this below.
+The function [`parseRequestBody`](https://github.com/yesodweb/wai/blob/wai-extra/3.0.3/wai-extra/Network/Wai/Parse.hs#L174) is part of the [`wai-extra`][wai-extra] library. It attempts to parse the request body as [HTML Form data](http://www.w3.org/TR/html401/interact/forms.html#h-17.13.4), returning a tuple containing a list of submitted parameters and a list of uploaded files. Since we aren't supporting file uploads we ignore the second element of the tuple. If the request `content-type` is neither `application/x-www-form-urlencoded` nor `multipart/form-data`, then both these arrays will be empty and we need to read and parse the request body ourselves. We'll look at this below.
 
 [wai-extra]: http://hackage.haskell.org/package/wai-extra
 
