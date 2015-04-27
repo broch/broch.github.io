@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-REMOTE="https://github.com/broch/broch.github.com.git"
+REMOTE="git@github.com:broch/broch.github.io.git"
 SITE="_site/"
 DEPLOY="deploy/"
 
@@ -63,6 +63,7 @@ deploy() {
 
   info "building site"
 
+  ./site clean > /dev/null
   ./site rebuild > /dev/null
 
   cp -r "$SITE"/* $DEPLOY
