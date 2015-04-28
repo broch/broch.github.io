@@ -91,12 +91,18 @@ Neither OAuth2 nor OpenID Connect define how authentication of the end user shou
 [^scim]: The aim is to build a full implementation of [the SCIM 2 spec](http://www.simplecloud.info/), but this is a work in progress.
 [^user-claims]: OpenID Connect defines a specific set of [claims](http://openid.net/specs/openid-connect-core-1_0.html#Claims), which unfortunately aren't directly compatible with SCIM.
 
-If you want to use a database, there's a `Persist` backend provided out of the box, which uses the Scim module. We could swap from using in-memory to Persist just by using
+If you want to use a database, there's a [`Persistent`](TODO) backend provided out of the box, which uses the Scim module. We could swap from using in-memory to Persistent just by using
 
 ``` haskell
 persistConfig <- persistBackend pool <$> inMemoryConfig issuer
 ```
 where `pool` is a Persist `ConnectionPool` instance.
+
+# Authorization Code Flow Walk-Through
+
+Using the server above, we can go through a typical flow to authenticate a user. We'll use `curl` to take the place of the client.
+
+TODO: curl commands and UI interaction
 
 # Configuration
 
@@ -149,27 +155,37 @@ The result of an authorization request can be one of
 * An error returned to the user agent, due to a potentially malicious client request
 * A redirect error, where the error information is returned to the client in the URL.
 
+The authorization web handler authenticates the user and then delegates to the function [`processAuthorizationRequest`](TODO).
 
 ## Token Endpoint
 
+The token endpoint authenticates the client and then calls the function [`processTokenRequest`](TODO), while return a JSON response as defined in the specification a token response or an error response.
 
 ## Dynamic Registration
 
+The server can optionally support client registration.
 
 ## Discovery
 
+The discovery endpoint just provides a well-known location for clients to obtain a copy of the server's configuration and supported features, such as the algorithms which can be used for encoding JWTs.
 
 ## UserInfo
 
-
+A client can optionally retrieve user details from the "user info" endpoint, by submitting the access token which was issued by the authorization server. This isn't strictly necessary, as OpenID Connect also issues an ID token which can represent the authenticated user.
 
 # Other Topics
 
 ## UI
 
-Blaze
+TODO: Improve look of Blaze UI.
+
+TODO: UI needs to be completely decoupled from handlers. This should also allow the login page to be defined externally. Routing also really needs to be more composable for this to work, to allow paths to be added into the existing table.
 
 ## Client Authentication
+
+OAuth2 only mentions client authentication using a password/secret, either using a Basic authorization header or passing the credentials in the request body. Providers are also free to accept other forms of authentication.
+
+OpenID Connect explicitly defines the client authentication methods which it supports. All of these are available in this implementation.
 
 ## Key Rotation
 
