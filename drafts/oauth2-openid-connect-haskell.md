@@ -20,8 +20,10 @@ I've been working on an implementation of the OpenID Connect specification. Sinc
   * Basic authentication with client secret
   * [JWT Bearer authentication][jwt-bearer]
 * ID Tokens (signed and/or encrypted)
+* Server key management and rotation [^key-rotation]
 
 [^jose-jwt]: JWTs are implemented in a separate project [`jose-jwt`](http://hackage.haskell.org/package/jose-jwt).
+[^key-rotation]: Key rotation is described in the [`openid-connect-core`](http://openid.net/specs/openid-connect-core-1_0.html#RotateSigKeys) spec.
 
 [client-reg]: http://openid.net/specs/openid-connect-registration-1_0.html
 [jwt-bearer]: https://tools.ietf.org/html/draft-ietf-oauth-jwt-bearer-12
@@ -33,7 +35,8 @@ It's still far from being a production-ready OpenID Connect Provider, but you ca
 To run a server, you need to create a configuration instance (`Broch.Server.Config`) and pass it to the `brochServer` function. The only things you *have to* supply are
 
 * An "issuer" for the OpenID Provider. This is the external URL used to access your server, for example `https://myopenidserver.com`.
-* A user authentication function.
+* A "Broch.Server.Config.KeyRing" instance to provide the signing and encryption keys for the server. The `defaultKeyRing` function can be used for this.
+* A function to provide the identity of the currently authenticated user.
 * A means of supplying user account information for OpenID authentication requests.
 
 Some standard options for authentication and user management are provided -- you just need to select them in your configuration. Everything else in a simple test server can use default settings, in-memory storage and provided login handlers.
@@ -52,16 +55,24 @@ import Broch.Model (Client(..), GrantType(..), Scope(..))
 import Broch.Scim
 import Broch.Server.Config
 import Broch.Server (brochServer, authenticatedSubject, passwordLoginHandler)
-import Broch.Server.Internal (routerToApp)
+import Broch.Server.Internal (routerToApp, text, invalidateSession, complete)
 import Broch.Server.Session (defaultLoadSession)
 
 main :: IO ()
 main = do
+    -- The clientsession key
     csKey  <- getDefaultKey
-    inMemory <- inMemoryConfig "http://localhost:3000"
+    opKeys <- defaultKeyRing
+    inMemory <- inMemoryConfig "http://localhost:3000" opKeys
     let config = inMemory { authenticateResourceOwner = authenticate, getUserInfo = loadUserInfo }
-    router <- brochServer config (authenticatedSubject, passwordLoginHandler (authenticateResourceOwner config))
-    let waiApp = routerToApp (defaultLoadSession 3600 csKey) (issuerUrl config) router
+    createClient config testClient
+    let extraRoutes =
+            [ ("/home",   text "Hello, I'm the home page")
+            , ("/login",  passwordLoginHandler authenticate)
+            , ("/logout", invalidateSession >> complete)
+            ]
+        routingTable = foldl (\tree (r, h) -> addToRoutingTree r h tree) (brochServer config authenticatedSubject) extraRoutes
+        waiApp = routerToApp (defaultLoadSession 3600 csKey) (issuerUrl config) routingTable
     run 3000 $ logStdoutDev waiApp
   where
     testClient = def
@@ -81,7 +92,7 @@ main = do
         }
 ```
 
-The web code is similar to that in [an earlier article on WAI](http://broch.io/posts/build-your-own-wai-framework/), but also includes the concept of a session, since users have to be able to authenticate to the authorization server [^default-session]. The `brochServer` function converts the configuration into a routing table of handler functions. This is then converted into a WAI `Application`.
+The web code is similar to that in [an earlier article on WAI](http://broch.io/posts/build-your-own-wai-framework/), but includes the concept of a session, since users have to be able to authenticate to the authorization server [^default-session]. The `brochServer` function converts the configuration into a routing table of handler functions, and we add some extra handlers for authentication and a very basic home page. The routing table is then converted into a WAI `Application`.
 
 We've added a single client which is allowed to use the authorization code flow and will use basic authentication at the token endpoint.
 
@@ -91,18 +102,45 @@ Neither OAuth2 nor OpenID Connect define how authentication of the end user shou
 [^scim]: The aim is to build a full implementation of [the SCIM 2 spec](http://www.simplecloud.info/), but this is a work in progress.
 [^user-claims]: OpenID Connect defines a specific set of [claims](http://openid.net/specs/openid-connect-core-1_0.html#Claims), which unfortunately aren't directly compatible with SCIM.
 
-If you want to use a database, there's a [`Persistent`](TODO) backend provided out of the box, which uses the Scim module. We could swap from using in-memory to Persistent just by using
+If you want to use a database, there's a [`Persistent`](http://www.yesodweb.com/book/persistent) backend provided out of the box, which uses the Scim module. We could swap from in-memory to Persistent storage just by using
 
 ``` haskell
 persistConfig <- persistBackend pool <$> inMemoryConfig issuer
 ```
-where `pool` is a Persist `ConnectionPool` instance.
+where `pool` is a Persistent `ConnectionPool` instance.
 
 # Authorization Code Flow Walk-Through
 
-Using the server above, we can go through a typical flow to authenticate a user. We'll use `curl` to take the place of the client.
+Using the server above, we can go through a typical flow to authenticate a user. We'll use `curl` to take the place of the client. All URLs would use HTTPS in a production system.
 
-TODO: curl commands and UI interaction
+The first stage is a redirection from the client to the authorization server, which results in the [following request](http://localhost:3000/oauth/authorize?client_id=123&state=982147&response_type=code&redirect_uri=http%3A%2F%2Fc123.client):
+
+```
+http://localhost:3000/oauth/authorize?client_id=123&state=982147&response_type=code&scope=openid&redirect_uri=http%3A%2F%2Fc123.client
+```
+
+The user will be asked to log in (if they aren't already authenticated to the authorization server), and then to approve the request for `openid` scope. Once this is granted, the authorization server redirects back to the client application:
+
+```
+http://c123.client/?state=982147&code=14581d956c81535c&scope=openid
+```
+
+The client would then exchange the code at the token endpoint for an `access_token` and an `id_token`, which are returned in a JSON response:
+
+```
+$ curl -u 123:abc123 -H "Accept: application/json" -X POST -d code=14581d956c81535c -d client_id=123 -d redirect_uri=http://c123.client -d grant_type=authorization_code http://localhost:3000/oauth/token
+{"expires_in":3600,"access_token":"eyJhbGciOiJSU0EtT0FFUCIsImtpZCI6IjIwMTUtMDUtMTlUMjA6MjI6MjUuMTc2MjY1MDAwMDAwWiIsImVuYyI6IkExMjhHQ00ifQ.bESkEA-0vGBhnftPuRLYcxvZuD6xbdTrp4h34zBxsn0AhNgXxAOsMsvC-14YijuMBAU4SxkMsBoxL4P4vEWODGrVwK8xb0_OogyxsrCSRYiYwYopU3xli9k3Dw_LpP0vFC60r1oGGsGexeKsAYy9BwL5kGeTNt9GtnjI2Q-WnrA.oZvgWxUtv4-RNddd.xcaT8kydCGN4Oe_JH5QvFTxsE9YJMJ976b1PEAkHvjHj2xcEM1pE_3MCsEGOV7tSho6omNCJFZC_AiKfP2s4QBLvXxG9kMON7OIIjrx4FKDuTAoZgtl-4aiQ_mt-ppt2lVf0pr03cYTvoBzJK85ofMnNeLsnrjA3oGB-xGxXSG5ZKkyutNo.X4ncv5rOTTBOE6hdclpWYg","token_type":"bearer","id_token":"eyJhbGciOiJSUzI1NiIsImtpZCI6IjIwMTUtMDUtMTlUMjA6MjI6MjQuMTc2MjY1MDAwMDAwWiJ9.eyJzdWIiOiJjYXQiLCJleHAiOjE0MzIxMzkxMDgsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6MzAwMCIsImlhdCI6MTQzMjEzODEwOCwiYXV0aF90aW1lIjoxNDMyMTM3MTY5LCJhdWQiOlsiMTIzIl19.f_EJI-wiDT1oa0Cta12yco73BurkYTCR-yrxl3k5zsYO7wNrHc9y2QE-ahmkdsiHdlzCZ4roF7_fVXRMHL2JNsC3S6oyeWfO6E-8sjsTFBRvkDSOCbYwm7HnYW-VWZ1e2M8g_RgZb4SVzW4OK55QntRvlwW6Aj6Tu_AN6Dg7Ua4"}
+```
+
+The `id_token` is defined by the spec to be a JWT. In this implementation, access tokens are also JWTs by default.
+
+The client can then use the access token to request more information about the user:
+
+```
+$ TOKEN=eyJhbGciOiJSU0EtT0FFUCIsImtpZCI6IjIwMTUtMDUtMTlUMjA6MjI6MjUuMTc2MjY1MDAwMDAwWiIsImVuYyI6IkExMjhHQ00ifQ.bESkEA-0vGBhnftPuRLYcxvZuD6xbdTrp4h34zBxsn0AhNgXxAOsMsvC-14YijuMBAU4SxkMsBoxL4P4vEWODGrVwK8xb0_OogyxsrCSRYiYwYopU3xli9k3Dw_LpP0vFC60r1oGGsGexeKsAYy9BwL5kGeTNt9GtnjI2Q-WnrA.oZvgWxUtv4-RNddd.xcaT8kydCGN4Oe_JH5QvFTxsE9YJMJ976b1PEAkHvjHj2xcEM1pE_3MCsEGOV7tSho6omNCJFZC_AiKfP2s4QBLvXxG9kMON7OIIjrx4FKDuTAoZgtl-4aiQ_mt-ppt2lVf0pr03cYTvoBzJK85ofMnNeLsnrjA3oGB-xGxXSG5ZKkyutNo.X4ncv5rOTTBOE6hdclpWYg
+$ curl -H "Accept: application/json" -H "Authorization: Bearer $TOKEN" http://localhost:3000/connect/userinfo
+{"email":"cat@someplace.com","sub":"cat"}
+```
 
 # Configuration
 
@@ -113,8 +151,7 @@ One of the things I had trouble with was the finding the best approach for build
 ``` haskell
 data Config m s = Config
     { issuerUrl                  :: Text
-    , publicKeys                 :: [Jwk]
-    , signingKeys                :: [Jwk]
+    , keyRing                    :: KeyRing m
     , responseTypesSupported     :: [ResponseType]
     , algorithmsSupported        :: SupportedAlgorithms
     , clientAuthMethodsSupported :: [ClientAuthMethod]
@@ -171,15 +208,13 @@ The discovery endpoint just provides a well-known location for clients to obtain
 
 ## UserInfo
 
-A client can optionally retrieve user details from the "user info" endpoint, by submitting the access token which was issued by the authorization server. This isn't strictly necessary, as OpenID Connect also issues an ID token which can represent the authenticated user.
+A client can optionally retrieve user details from the "user info" endpoint, by submitting the access token which was issued by the authorization server. This isn't strictly necessary, as OpenID Connect also isssues an ID token which can represent the authenticated user.
 
 # Other Topics
 
 ## UI
 
 TODO: Improve look of Blaze UI.
-
-TODO: UI needs to be completely decoupled from handlers. This should also allow the login page to be defined externally. Routing also really needs to be more composable for this to work, to allow paths to be added into the existing table.
 
 ## Client Authentication
 
