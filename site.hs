@@ -4,12 +4,13 @@ import           Control.Monad (msum)
 import           Data.Monoid ((<>))
 import           Data.List (isInfixOf)
 import qualified Data.Map.Strict as M
-import           Data.Time.Format (parseTime, formatTime)
+import qualified Data.Set as S
+import           Data.Time.Format (parseTimeM, formatTime, TimeLocale, defaultTimeLocale, iso8601DateFormat)
 import           Data.Time.Clock (UTCTime (..))
 import           Hakyll
 import           System.Environment
-import           System.FilePath.Posix  (takeBaseName,takeDirectory,(</>),splitFileName)
-import           System.Locale (TimeLocale, defaultTimeLocale, iso8601DateFormat)
+import           System.FilePath.Posix  (takeBaseName, takeDirectory, (</>), splitFileName)
+import           Text.Pandoc.Options (writerExtensions, Extension(Ext_literate_haskell))
 
 config :: Configuration
 config = defaultConfiguration
@@ -20,9 +21,10 @@ main :: IO ()
 main = do
     (action:_) <- getArgs
     let preview = action == "watch" || action == "preview"
+        mdOrLhs d = d <> ("**.md" .||. "**.lhs")
         postsPattern
-            | preview = "posts/*.md" .||. "drafts/*.md"
-            | otherwise = "posts/*.md"
+            | preview = mdOrLhs "posts/*" .||. mdOrLhs "drafts/*"
+            | otherwise = mdOrLhs "posts/*"
 
     hakyllWith config $ do
         match ("images/*" .||. "CNAME") $ do
@@ -42,7 +44,7 @@ main = do
 
         match postsPattern $ do
             route niceRoute
-            compile $ pandocCompiler
+            compile $ pandocCompilerWith defaultHakyllReaderOptions outputOptionsSansLHS
                 >>= loadAndApplyTemplate "templates/post.html"    postCtx
                 >>= loadAndApplyTemplate "templates/default.html" postCtx
                 >>= relativizeUrls
@@ -105,7 +107,7 @@ getUpdatedTime locale id' = do
     maybe empty' return $ msum [tryField "updated" fmt | fmt <- formats]
   where
     empty'     = fail $ "getUpdatedTime: " ++ "could not parse time for " ++ show id'
-    parseTime' = parseTime locale
+    parseTime' = parseTimeM True locale
     formats    =
         [ "%a, %d %b %Y %H:%M:%S %Z"
         , "%Y-%m-%dT%H:%M:%S%Z"
@@ -116,7 +118,9 @@ getUpdatedTime locale id' = do
         , "%b %d, %Y"
         ]
 
-
+outputOptionsSansLHS = defaultHakyllWriterOptions
+    { writerExtensions = S.delete Ext_literate_haskell (writerExtensions defaultHakyllWriterOptions)
+    }
 
 -- replace url of the form foo/bar/index.html by foo/bar
 removeIndexHtml :: Item String -> Compiler (Item String)
@@ -127,7 +131,9 @@ removeIndexStr url = case splitFileName url of
     (dir, "index.html") | isLocal dir -> dir
                         | otherwise   -> url
     _                                 -> url
-  where isLocal uri = not $ "://" `isInfixOf` uri
+  where
+    isLocal :: String -> Bool
+    isLocal uri = not $ "://" `isInfixOf` uri
 
 -- replace a foo/bar.md by foo/bar/index.html
 -- this way the url looks like: foo/bar in most browsers
