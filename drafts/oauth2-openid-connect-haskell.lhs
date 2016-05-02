@@ -1,28 +1,35 @@
 ---
 title: OAuth2 and OpenID Connect in Haskell
 author: Luke
-date: 2015-03-10
+date: 2015-05-02
 tags: haskell,identity,oauth2,openid-connect
 ---
 
-I've been working for a whil on an implementation of the OpenID Connect specification. Since it was something I already knew quite a bit about from my previous job, it seemed like a good idea for a "real-world" Haskell project. The result is a project called "Broch" [^broch-origin]. Features which are implemented to various degrees include
+<!--
+Run using:
+    stack ghci --ghci-options oauth2-openid-connect-haskell.lhs
+or compile with stack ghc
+-->
+
+I've been working for a while on an implementation of the OpenID Connect specification. Since it was something I already knew quite a bit about from my previous job, it seemed like a good idea for a "real-world" Haskell project. The result is a project called "Broch" [^broch-origin], which is an OpenID Connect identity provider. Features include
 
 [^broch-origin]: This follows from the contrived acronym "Basic Realization of OpenID Connect in Haskell", but I chose the name first and the acronym later. If someone can think of a better one, please let me know. Brochs are tall, round iron age buildings and I enjoyed playing in the ruins of some of them when I was young. They are of simple design, solidly engineered and secure. All good goals for an identity management system to aspire to, even an implementation of OAuth2/OpenID Connect.
 
 * OAuth2 flows
-  * Authorization endpoint
-  * Token endpoint
+    + Authorization endpoint
+    + Token endpoint
 * OpenID Connect basic flows
 * OpenID Connect hybrid flows
 * OpenID Connect Discovery
 * Support for signed and encrypted JWTs [^jose-jwt]
 * [Client Registration][client-reg]
 * Client authentication
-  * Basic authentication with client secret
-  * [JWT Bearer authentication][jwt-bearer]
+    + Basic authentication with client secret
+    + [JWT Bearer authentication][jwt-bearer]
 * ID Tokens (signed and/or encrypted)
 * [Pairwise subject identifiers][sub-id-types]
 * Server key management and rotation [^key-rotation]
+* SQLite back end
 * PostgreSQL 9.5 back end
 
 [^jose-jwt]: JWTs are implemented in a separate project [`jose-jwt`](http://hackage.haskell.org/package/jose-jwt).
@@ -32,14 +39,15 @@ I've been working for a whil on an implementation of the OpenID Connect specific
 [jwt-bearer]: https://tools.ietf.org/html/draft-ietf-oauth-jwt-bearer-12
 [sub-id-types]: http://openid.net/specs/openid-connect-core-1_0.html#SubjectIDTypes
 
-You can easily get a prototype server up and running with default settings and it's intended that the important features should be easily configurable. This article is more about the Haskell implementation than the specification, so doesn't explain OAuth2 and OpenID Connect concepts in any detail.
+You can easily get a prototype server up and running with default settings and it's intended that the important features should be easily customized. This article is mostly an introduction to the project and the Haskell implementation. If you don't know much about OAuth2 or OpenID Connect but are still interested, you should probably check out the [OpenID Connect FAQ](http://openid.net/connect/faq/) first to get an overview.
 
 The Command Line Executable
 ===========================
 
-The project build creates an executable which can be used to get up and running quickly. Instructions for building and running against a PostgreSQL database can be found in the project [Readme file][broch-readme].
+In addition to the main library, the project build creates a `broch` executable which can be used to get up and running quickly. Instructions for building and running against a SQLite or  PostgreSQL database can be found in the project [Readme file][broch-readme]. The [source code][command-line-source] is also a useful reference for building your own server application from scratch.
 
 [broch-readme]: https://github.com/tekul/broch/blob/master/README.md
+[command-line-source]: https://github.com/tekul/broch/blob/master/broch-server/broch.hs
 
 Coding a Minimal Server
 =======================
@@ -48,6 +56,7 @@ In many cases, you will want to write a customized server of your own. To do thi
 
 * An "issuer" for the OpenID Provider. This is the external URL used to access your server, for example `https://myopenidserver.com`.
 * A `Broch.Server.Config.KeyRing` instance to provide the signing and encryption keys for the server. The `defaultKeyRing` function can be used for this.
+* A function to render an "approval" page, which allows the user to consent to the authorization request.
 * A function to authenticate (or reauthenticate) a user.
 * A function to provide the identity of the currently authenticated user.
 * A means of supplying user information for OpenID authentication requests.
@@ -56,72 +65,80 @@ Some standard options for authentication and user management are provided -- you
 
 The configured server is built on WAI and can be run using the warp web server:
 
+> {-# LANGUAGE OverloadedStrings #-}
+>
 > import Data.Default.Generics (def)
 > import qualified Data.Text as T
 > import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 > import Network.Wai.Handler.Warp
+> import Web.Routing.TextRouting
 >
 > import Broch.Model (Client(..), GrantType(..), Scope(..), UserInfo(..))
 > import Broch.Server.Config
 > import Broch.Server (brochServer, authenticatedSubject, authenticateSubject, defaultLoginPage, defaultApprovalPage, passwordLoginHandler)
-> import Broch.Server.Internal (routerToApp, text, invalidateSession, complete)
+> import Broch.Server.Internal (routerToApp, text, invalidateSession)
 > import Broch.Server.Session (defaultKey, defaultLoadSession)
-> import Web.Routing.TextRouting
+> import Broch.URI (parseURI)
 >
 > main :: IO ()
 > main = do
->     -- The session key
->     csKey  <- defaultKey
+>     sessionEncryptionKey <- defaultKey
 >     opKeys <- defaultKeyRing
 >     inMemory <- inMemoryConfig "http://localhost:3000" opKeys Nothing
 >     let config = inMemory { authenticateResourceOwner = authenticate, getUserInfo = loadUserInfo }
 >     createClient config testClient
 >     let extraRoutes =
->             [ ("/home",   text "Hello, I'm the home page")
->             , ("/login",  passwordLoginHandler defaultLoginPage authenticate)
->             , ("/logout", invalidateSession >> complete)
->             ]
+>           [ ("/home",   text "Hello, I'm the home page")
+>           , ("/login",  passwordLoginHandler defaultLoginPage authenticate)
+>           , ("/logout", invalidateSession >> text "You have been logged out")
+>           ]
 >         routingTable = foldl (\tree (r, h) -> addToRoutingTree r h tree) (brochServer config defaultApprovalPage authenticatedSubject authenticateSubject) extraRoutes
->         waiApp = routerToApp (defaultLoadSession 3600 csKey) (issuerUrl config) routingTable
+>         waiApp = routerToApp (defaultLoadSession 3600 sessionEncryptionKey) (issuerUrl config) routingTable
 >     run 3000 $ logStdoutDev waiApp
 >   where
+>     Right uri = parseURI "http://c123.client"
 >     testClient = def
->         { clientId = "123"
->         , clientSecret = Just "abc123"
->         , authorizedGrantTypes = [AuthorizationCode]
->         , redirectURIs = ["http://c123.client"]
->         , allowedScope = [OpenID]
->         }
+>       { clientId = "123"
+>       , clientSecret = Just "abc123"
+>       , authorizedGrantTypes = [AuthorizationCode]
+>       , redirectURIs = [uri]
+>       , allowedScope = [OpenID]
+>       }
 >     authenticate username password
->         | username == password = return (Just username)
->         | otherwise            = return Nothing
+>       | username == password = return (Just username)
+>       | otherwise            = return Nothing
 >
->     loadUserInfo uid _ = return . Just $def
->         { sub = uid
->         , email = Just (T.concat [uid, "@someplace.com"])
->         }
+>     loadUserInfo uid _ = return . Just $ def
+>       { sub = uid
+>       , email = Just (T.concat [uid, "@someplace.com"])
+>       }
 
-The web code is similar to that in [an earlier article on WAI](http://broch.io/posts/build-your-own-wai-framework/), but includes the concept of a session, since users have to be able to authenticate to the authorization server [^default-session]. The `brochServer` function converts the configuration into a routing table of handler functions, and we add some extra handlers for authentication and a very basic home page. The routing table is then converted into a WAI `Application`.
+The web code is similar to that in [an earlier article on WAI](http://broch.io/posts/build-your-own-wai-framework/), but includes the concept of a session, since users have to be able to authenticate to the authorization server. The `brochServer` function converts the configuration into a routing table of handler functions and we add some extra handlers for authentication and a very basic home page. The [reroute](hackage.haskell.org/package/reroute) package is used to build the routing table. The table is then converted into a WAI `Application` which we can run.
 
 We've added a single client which is allowed to use the authorization code flow and will use basic authentication (the default) at the token endpoint.
 
 Neither OAuth2 nor OpenID Connect define how authentication of the end user should take place at the authorization server, so user account data and authentication are decoupled from the core OpenID/OAuth2 functionality. Here we have used an authentication function which merely compares the username and password for equality, so there aren't actually any user accounts -- you can authenticate with any name. For "user info" requests, we've just added a function `loadUserInfo` to make up the data. In a real implementation, you would have a specific user data type and would write functions to manage user accounts and convert the data to the claims returned for a user info request [^user-claims]. A side project is an implementation based on the SCIM specification [^scim].
 
-[^default-session]: Here we are using the default session implementation which is based on the [`clientsession`](http://hackage.haskell.org/package/clientsession) package.
 [^scim]: The aim is to build a full implementation of [the SCIM 2 spec](http://www.simplecloud.info/), but this is a work in progress, and SCIM may be overkill for many use cases.
 [^user-claims]: OpenID Connect defines a specific set of [claims](http://openid.net/specs/openid-connect-core-1_0.html#Claims), which unfortunately aren't directly compatible with SCIM.
 
-If you want to use a database, there's a [`Persistent`](http://www.yesodweb.com/book/persistent) backend provided out of the box, which uses the Scim module. We could swap from in-memory to Persistent storage just by using
+
+Database Backend
+----------------
+
+To add persistent storage, there are SQLite and PostgreSQL backs end available, which are built on top of the `sqlite-simple` and `postresql-simple` packages. These are used in the [command-line source][command-line-source] which you can examine along with the project readme for more details. We could swap from in-memory to using Postgres just by changing the configuration to
 
 ``` haskell
-persistConfig <- persistBackend pool <$> inMemoryConfig issuer
+config <- postgreSQLBackend pool <$> inMemoryConfig issuer opKeys Nothing
 ```
-where `pool` is a Persistent `ConnectionPool` instance.
+
+where `pool` is a `Data.Pool` of Postgres `Connection` instances. The project has some SQL scripts for setting up the Postgres database schema. It requires Postgres 9.5 or later. The SQLite backend creates the schema as required.
+
 
 Authorization Code Flow Walk-Through
 ====================================
 
-Using the server above, we can go through a typical flow to which the client application would use to authenticate a user. We'll use `curl` to take the place of the client. All URLs would use HTTPS in a production system.
+Using the server above, we can work through a typical flow which a client application would use to authenticate a user. We'll use `curl` to take the place of the client. All URLs would use HTTPS in a production system.
 
 The first step is a redirection from the client to the authorization server, which creates the [following request](http://localhost:3000/oauth/authorize?client_id=123&state=982147&response_type=code&redirect_uri=http%3A%2F%2Fc123.client) [^auth-code-request]:
 
@@ -192,10 +209,13 @@ type LoadClient m = ClientId -> m (Maybe Client)
 
 The implementations can then be written in any way, as long as they end up satisfying the required type. They can use partial application, for example, to pass other dependencies such as connection pools.
 
-Request Processing
-==================
 
-The majority of the functionality for processing authorization and token requests is decoupled from the HTTP interface (WAI). The web handlers extract the request data, bundle the parameters up in a map, then delegate the detailed work to other functions. This makes it easier to test the core functionality and to use it with a different web front-end.
+The Server
+==========
+
+The `brochServer` function used above is in the [`Broch.Server`](https://github.com/tekul/broch/blob/master/Broch/Server.hs) module, which also contains most of the web handler code. This is where everything is plugged together to create the server and is thus the most useful source for understanding how the implementation works. It also contains the default functions for authentication and the user interface, which we used above.
+
+Most of the work for processing authorization and token requests is decoupled from the HTTP interface (WAI) and the code is in separate modules. The web handlers extract the request data, bundle the parameters up in a map, then delegate the detailed work to other functions. This makes it easier to test the core functionality and to use it with a different web front-end.
 
 Authorization Endpoint
 ----------------------
@@ -207,18 +227,17 @@ The result of an authorization request can be one of
 * An error returned to the user agent, due to a potentially malicious client request
 * A redirect error, where the error information is returned to the client in the URL.
 
-The authorization web handler authenticates the user and then delegates to the function [`processAuthorizationRequest`](TODO).
+The authorization web handler authenticates the user and then delegates to the function [`processAuthorizationRequest`](https://github.com/tekul/broch/blob/master/Broch/OAuth2/Authorize.hs).
 
 Token Endpoint
 --------------
 
-The token endpoint authenticates the client and then calls the function [`processTokenRequest`](TODO), return a JSON response as defined in the specification. This can be either a token response or an error response.
+The token endpoint authenticates the client and then calls the function [`processTokenRequest`](https://github.com/tekul/broch/blob/master/Broch/OAuth2/Token.hs), return a JSON response as defined in the specification. This can be either a token response or an error response.
 
 Dynamic Registration
 --------------------
 
 The server can optionally support [client registration](http://openid.net/specs/openid-connect-registration-1_0.html).
-
 
 Discovery
 ---------
@@ -242,8 +261,6 @@ The UI requirements are quite minimal and will usually consist of
 * A page to obtain the user's approval for the information requested by the client.
 
 Default implementations are provided for both of these. The login page is used with the `passwordLoginHandler` and is a plain Blaze `Html` page. User approval is a function which takes the approval data and returns an `Html` page.
-
-The
 
 Client Authentication
 ---------------------
