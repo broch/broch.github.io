@@ -278,14 +278,42 @@ The server's public keys can be obtained from the `jwks_uri` endpoint (which is 
 
 The rotation of [signing](http://openid.net/specs/openid-connect-core-1_0.html#RotateSigKeys) and [encryption](http://openid.net/specs/openid-connect-core-1_0.html#RotateEncKeys) keys is also covered in the spec. The `KeyRing` data type stores two active key pairs -- one for signing and one for encryption. It also has a function to rotate the keys, expiring the previous active keys and generating news ones. Unless the keys need to be invalidated immediately (for security reasons, for example), the expired signing keys will still be available from the `jwks_uri` endpoint for a configurable grace period, so that tokens created with earlier signing keys will still validate. The server will also retain decryption private keys internally for the grace period.
 
-Customization
-=============
 
-* Enabling/Disabling features (discovery, registration)
-* Different ID Token contents
-* Adding a standard OAuth2 protected endpoint
+Developing in Haskell
+=====================
 
-Conclusion
-==========
+The project has been a good learning experience and I've found Haskell to be particularly suitable for working to a complicated specification like OAuth2/OpenID Connect. The different errors and outcomes of a request can be modelled nicely using algebraic data types and using the `Either` type allows us to deal with all the error conditions defined by the spec while keeping IO errors (for example, data access errors) completely separate. As an example, the return type for `processAuthorizationRequest` is
 
-WIP.
+```haskell
+m (Either AuthorizationRequestError URI)
+```
+
+The code runs in an arbitrary monad and thus does not contain any IO code. In practice `m` will be a `MonadIO` instance, since the functions for loading clients and so on will need to make calls to a database. Any IO errors should be returned as `500` responses but in the absence of these, we know from the type that the outcome of a call to the function will be either an `AuthorizationRequestError` or a URI which we should redirect to [^client-500].
+
+`AuthorizationRequestError` is a data type which captures the cases where the request will "short-circuit":
+
+* The client shows potentially malicious behaviour which should be reported to the end user.
+* The client has submitted an otherwise invalid request, which should be reported to it via a redirect.
+* The user needs to re-authenticate. This typically happens when the client requires that the previous login took place within a certain period.
+
+The actual data type is:
+
+```haskell
+data AuthorizationRequestError
+    = MaliciousClient EvilClientError
+    | RequiresAuthentication
+    | ClientRedirectError URI
+```
+
+In deciding how to respond to the request, the handler code needs to pattern-match on the types and we can't, for example, redirect the user to a malicious client by accident. The compiler will also generally warn if we forget to match on one of the options, which forces us to deal with all the cases. In future, the [OAuth2 Form Post](http://openid.net/specs/oauth-v2-form-post-response-mode-1_0.html) spec will also be implemented, which would again modify the return type, probably changing the successful outcome from a simple redirect, to either a redirect or a form post. The compiler would immediately point this out to calling code, making it difficult to call the function without also dealing with this case.
+
+This was a recurring theme -- data types written to match the specification would in turn drive the development and ensure that all the corner cases had been dealt with in the resulting code.
+
+[^client-500]: The spec actually says that 500 errors should be returned as a redirect to the client, but that can be handled by a single catch in the handler code.
+
+Future Work
+===========
+
+Broch implements most of the features for an OpenID Connect Provider required by the certification programme [^connect-cert]. Work on additional features is ongoing. The current aim is to develop an opinionated but customizable solution for authentication based on OpenID Connect, rather than an identity management solution which does *everything*. Even so, a production-ready solution requires a lot more than simple spec conformance. Suggestions for future development and also improvements to the current code are welcome.
+
+[^connect-cert]: A deployed server has been tested successfully against the certification suite. Some optional features aren't implemented yet. More information on certification can be found on the [OpenID site](http://openid.net/certification/).
