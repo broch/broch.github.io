@@ -19,12 +19,13 @@ config = defaultConfiguration
 
 main :: IO ()
 main = do
-    (action:_) <- getArgs
-    let preview = action == "watch" || action == "preview"
+    args <- getArgs
+    let isPreview action = action == "watch" || action == "preview"
+        preview = not (null args) && isPreview (head args)
         mdOrLhs d = d <> ("**.md" .||. "**.lhs")
         postsPattern
-            | preview = mdOrLhs "posts/*" .||. mdOrLhs "drafts/*"
-            | otherwise = mdOrLhs "posts/*"
+          | preview = mdOrLhs "posts/*" .||. mdOrLhs "drafts/*"
+          | otherwise = mdOrLhs "posts/*"
 
     hakyllWith config $ do
         match ("images/*" .||. "CNAME") $ do
