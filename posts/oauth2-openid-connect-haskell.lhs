@@ -1,13 +1,13 @@
 ---
 title: OAuth2 and OpenID Connect in Haskell
 author: Luke
-date: 2015-05-02
+date: 2016-05-02
 tags: haskell,identity,oauth2,openid-connect
 ---
 
 <!--
 Run using:
-    stack ghci --ghci-options oauth2-openid-connect-haskell.lhs
+    stack ghci &minus;-ghci-options oauth2-openid-connect-haskell.lhs
 or compile with stack ghc
 -->
 
@@ -44,7 +44,7 @@ You can easily get a prototype server up and running with default settings and i
 The Command Line Executable
 ===========================
 
-In addition to the main library, the project build creates a `broch` executable which can be used to get up and running quickly. Instructions for building and running against a SQLite or  PostgreSQL database can be found in the project [Readme file][broch-readme]. The [source code][command-line-source] is also a useful reference for building your own server application from scratch.
+In addition to the main library, the project build creates a `broch` executable which can be used to get up and running quickly. Instructions for building and running against a SQLite or  PostgreSQL database can be found in the project [readme file][broch-readme]. The [source code][command-line-source] is also a useful reference for building your own server application from scratch.
 
 [broch-readme]: https://github.com/tekul/broch/blob/master/README.md
 [command-line-source]: https://github.com/tekul/broch/blob/master/broch-server/broch.hs
@@ -63,7 +63,7 @@ In many cases, you will want to write a customized server of your own. To do thi
 
 Some standard options for authentication and user management are provided -- you just need to select them in your configuration. Everything else in a simple test server can use default settings, in-memory storage and provided login handlers.
 
-The configured server is built on WAI and can be run using the warp web server:
+The configured server uses WAI and can be run using the warp web server:
 
 > {-# LANGUAGE OverloadedStrings #-}
 >
@@ -113,7 +113,7 @@ The configured server is built on WAI and can be run using the warp web server:
 >       , email = Just (T.concat [uid, "@someplace.com"])
 >       }
 
-The web code is similar to that in [an earlier article on WAI](http://broch.io/posts/build-your-own-wai-framework/), but includes the concept of a session, since users have to be able to authenticate to the authorization server. The `brochServer` function converts the configuration into a routing table of handler functions and we add some extra handlers for authentication and a very basic home page. The [reroute](hackage.haskell.org/package/reroute) package is used to build the routing table. The table is then converted into a WAI `Application` which we can run.
+The web code is similar to that in [an earlier article on WAI](http://broch.io/posts/build-your-own-wai-framework/), but includes the concept of a session, since users have to be able to authenticate to the authorization server. The `brochServer` function converts the configuration into a routing table, mapping URL paths to web handler functions and we add extra handlers for login/logout processing also to render a very basic home page. The [reroute](hackage.haskell.org/package/reroute) package is used to build the routing table. The table is then converted into a WAI `Application` which we can run.
 
 We've added a single client which is allowed to use the authorization code flow and will use basic authentication (the default) at the token endpoint.
 
@@ -242,25 +242,22 @@ The server can optionally support [client registration](http://openid.net/specs/
 Discovery
 ---------
 
-The discovery endpoint just provides a well-known location for clients to obtain a copy of the server's configuration and supported features, such as the algorithms which can be used for encoding JWTs.
+The discovery endpoint just provides a well-known location for clients to obtain a copy of the server's configuration and supported features, such as the algorithms which can be used for encoding JWTs and the URLs of the other endpoints. The information is published at the standard URL path `/.well-known/openid-configuration`.
 
 UserInfo
 --------
 
-A client can optionally retrieve user details from the "user info" endpoint, by submitting the access token which was issued by the authorization server. This isn't strictly necessary, as OpenID Connect also isssues an ID token which can represent the authenticated user.
+A client can optionally retrieve user details from the "user info" endpoint by submitting the access token which was issued by the authorization server. This isn't strictly necessary, as OpenID Connect also isssues an ID token which asserts the identity of the authenticated user and this may contain enough information, depending on the client's requirements.
 
-Other Topics
-============
+Front End
+---------
 
-UI
---
-
-The UI requirements are quite minimal and will usually consist of
+The UI requirements are minimal and will usually consist of
 
 * A login page of some kind, unless the authorization server uses some authentication mechanism which doesn't require one.
 * A page to obtain the user's approval for the information requested by the client.
 
-Default implementations are provided for both of these. The login page is used with the `passwordLoginHandler` and is a plain Blaze `Html` page. User approval is a function which takes the approval data and returns an `Html` page.
+Default implementations are provided for both of these. The login page is used with the `passwordLoginHandler` and is a plain Blaze `Html` page. User approval is a function which takes the approval data and returns an `Html` page. The command-line server will also serve up static content from a configured directory, which can be used to provide CSS and image files for the UI.
 
 Client Authentication
 ---------------------
@@ -305,9 +302,9 @@ data AuthorizationRequestError
     | ClientRedirectError URI
 ```
 
-In deciding how to respond to the request, the handler code needs to pattern-match on the types and we can't, for example, redirect the user to a malicious client by accident. The compiler will also generally warn if we forget to match on one of the options, which forces us to deal with all the cases. In future, the [OAuth2 Form Post](http://openid.net/specs/oauth-v2-form-post-response-mode-1_0.html) spec will also be implemented, which would again modify the return type, probably changing the successful outcome from a simple redirect, to either a redirect or a form post. The compiler would immediately point this out to calling code, making it difficult to call the function without also dealing with this case.
+In deciding how to respond to the request, the handler code needs to pattern-match on the types and we can't, for example, redirect the user to a malicious client by accident. The compiler will also generally warn if we forget to match on one of the options, which forces us to deal with all the cases. In future, the [OAuth2 Form Post](http://openid.net/specs/oauth-v2-form-post-response-mode-1_0.html) spec will also be implemented, which would again modify the return type, probably changing the successful outcome from a simple redirect to either a redirect or a form post. The compiler would immediately point this out to calling code, making it difficult to call the function without also dealing with this case.
 
-This was a recurring theme -- data types written to match the specification would in turn drive the development and ensure that all the corner cases had been dealt with in the resulting code.
+This was a recurring theme -- data types written to match the specification would in turn drive the development and ensure that all the corner cases had been dealt with.
 
 [^client-500]: The spec actually says that 500 errors should be returned as a redirect to the client, but that can be handled by a single catch in the handler code.
 
