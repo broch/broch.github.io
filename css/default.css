@@ -32,11 +32,15 @@ div#content {
     max-width: 800px;
 }
 
-div#logo a {
+div#logo {
     color: black;
     float: left;
     font-size: 18px;
     font-weight: bold;
+}
+
+div#logo span {
+  padding-left: 5px;
 }
 
 div#header #navigation {
