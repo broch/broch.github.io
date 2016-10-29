@@ -7,7 +7,7 @@ executable site
   main-is:          site.hs
   build-depends:    base == 4.*
                   , broch
-                  , hakyll == 4.7.*
+                  , hakyll == 4.9.*
                   , containers
                   , data-default-generics
                   , filepath

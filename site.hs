@@ -3,7 +3,6 @@
 import           Control.Monad (msum)
 import           Data.Monoid ((<>))
 import           Data.List (isInfixOf)
-import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import           Data.Time.Format (parseTimeM, formatTime, TimeLocale, defaultTimeLocale, iso8601DateFormat)
 import           Data.Time.Clock (UTCTime (..))
@@ -104,7 +103,7 @@ updatedField key format = field key $ \i -> do
 getUpdatedTime :: MonadMetadata m => TimeLocale -> Identifier -> m UTCTime
 getUpdatedTime locale id' = do
     metadata <- getMetadata id'
-    let tryField k fmt = M.lookup k metadata >>= parseTime' fmt
+    let tryField k fmt = lookupString k metadata >>= parseTime' fmt
     maybe empty' return $ msum [tryField "updated" fmt | fmt <- formats]
   where
     empty'     = fail $ "getUpdatedTime: " ++ "could not parse time for " ++ show id'
