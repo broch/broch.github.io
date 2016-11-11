@@ -1,25 +1,27 @@
 ---
-title: Linux Desktop Installation with XMonad
+title: Linux Setup with XMonad
 author: Luke
 date: 2016-11-30
 tags: linux,xmonad
 ---
 
-Earlier this year, after many years of using OSX, I decided to switch to using Linux for my desktop. Most of the development tools I use work better on Linux and I wanted to use a tiling window manager with a minimal user interface. The changes Apple have been making to their machines and OS over the past few years have been irrelevant to my needs at best, and in some cases are downright annoying. The recent release of laptops with no escape key and yet more different connectors is just confirmation that I made the right choice. I bought a Thinkpad P50 as my work machine.
+Earlier this year, after many years of using OSX, I decided to switch to using Linux for my desktop. Most of the development tools I use work better on Linux. I mostly work directly with plain-text format files and I use the terminal a lot. I also wanted to use a tiling window manager with a minimal user interface. The changes Apple have been making to their machines and OS over the past few years have been irrelevant to my needs at best, and in some cases are downright annoying. The recent release of laptops with no escape key and yet more connectors (dongle hell) is just confirmation that I made the right choice. I bought a Thinkpad P50 as my work machine [^p50].
+
+[^p50]: There's nothing specific to the P50 in this article. It's quite a chunky machine and is pretty powerful. However, it has an Nvidia graphics card as well as the on-board Intel card and this is one area where Linux is a bit of a headache. Support for dual-graphics card laptops on Linux isn't great. This will improve in future versions, but if you don't need high-performance graphics then you might be better picking a machine with a single card. The laptop screen runs fine using the Intel card, but there are some display issues if I use an external monitor with it. If I switch to the NVidia card exclusively it works fine but this requires a reboot and a BIOS switch. I haven't tried using NVidia's drivers or optimising the setup for switching between the cards yet. There are tools for this but it seems like a bit of a minefield and I'm happy enough with it for now.
 
 I'd maintained small Linux server installations for many years, and am happy enough setting up postfix or nginx, but I'd never really used Linux as a desktop environment. I wanted to use a lightweight XMonad setup rather than a stock distro desktop installation, which meant having to find out about a lot of things that would otherwise be taken care of automatically, but the result is that I have a simpler system and also a better understanding of how it actually works.
 
-This article describes the installation process, what I learned along the way, and how I got to where I wanted to be (or near enough).
+This article describes the installation process, things I discovered along the way, and how I got to where I wanted to be (or near enough).
 
 Install Ubuntu 16.04 Server
 ===========================
 
-I used an Ubuntu server installation as a starting point. I wanted something reliable to build on which would be maintained long-term, but I didn't want all the unnecessary noise of a full Gnome/Unity setup when I would be running XMonad as the window manager. I might experiment with other Linux distros in future when I'm more familiar with my current setup and have been running it for a while and I need to do another installation.
+I used an Ubuntu server installation as a starting point. I wanted something reliable to build on which would be maintained long-term, but I didn't want all the unnecessary noise of a full Gnome/Unity setup when I would be running XMonad as the window manager. I might experiment with other Linux distros in future when I'm more familiar with my current setup and have been running it for a while.
 
 Networking
 ==========
 
-The installation was done with an ethernet connection and if this is missing on a subsequent boot, the system will hang waiting for the connection to come up [^net-timeout]. By default, the static network configuration is read from the file `/etc/network/interfaces`, but for a laptop, this isn't ideal, as the available networks may change and you probably want to be able to connect to different WIFI networks on demand. The `network-manager` package is a common solution. First comment out everything but the `lo` interface in the `/etc/network/interfaces` file:
+The installation was done with an ethernet connection and if this is missing on a subsequent boot, the system will hang waiting for the connection to come up [^net-timeout]. By default, the static network configuration is read from the file `/etc/network/interfaces`, but for a laptop, this isn't ideal, as the available networks may change and you probably want to be able to connect to different WIFI networks depending on where you are. The `network-manager` package is a common solution. First comment out everything but the `lo` interface in the `/etc/network/interfaces` file:
 
 [^net-timeout]: There is a timeout configured somewhere which I changed the first time I ran into the problem, but I can't find the file anymore, so this is a TODO. In any case it doesn't matter once the ethernet settings have been removed from `/etc/network/interfaces`.
 
@@ -37,9 +39,9 @@ iface lo inet loopback
 
 then install the package without the UI parts:
 
-    sudo apt install -no-install-recommends network-manager
+    sudo apt install --no-install-recommends network-manager
 
-In a normal desktop setup, you would just select an available WIFI network from a menu of available connections. The `nmcli` command-line tool provides equivalent commands for everything you need to manage connections. NetworkManager will connect automatically to networks in its database when you boot up, so you should only need to interact with it when you are connection from a new location.
+In a normal desktop setup, you would just select an available WIFI network from a menu of available connections. The `nmcli` command-line tool provides equivalent commands for everything you need to manage connections. NetworkManager will connect automatically to networks in its database when you boot up, so you should only need to interact with it when you are connecting from a new location.
 
 To create a DHCP configured ethernet connection
 
@@ -65,7 +67,11 @@ To delete connections
 
     nmcli connection delete name_or_id
 
-You can also edit or delete existing connections. There are also terminal-based editors and a demnu option for interacting with NetworkManager, but I haven't looked at those.
+You can also edit or delete existing connections. There are also terminal-based editors and a dmenu option for interacting with NetworkManager, but I haven't looked at those.
+
+The connections are stored as files in the `/etc/NetworkManager/system-connections` directory. Note that the passwords are stored in plain text in these files. I don't mind this since none of the WIFI connections I use are very secret [^nm-gkr].
+
+[^nm-gkr]: NetworkManager can apparently integrate with gnome keyring, but I haven't got this working yet. Setting `psk-flags=1` means a user secret agent will be asked for the password (see `man nm-settings`) but I don't know how this takes place yet. Supposedly it normally delegates to `nm-applet` but I don't have the gnome parts installed so this isn't an option. A workaround is to remove the `psk` entry from the connection file and get `nmcli` to ask you to enter the password: `nmcli --ask connection up Cafe`. It is also possible to run `nmcli agent` in another terminal window as the secret agent, but you still have to enter the password yourself. There may be other programs out there which will fulfil this role.
 
 
 Managing External Disks
@@ -101,8 +107,8 @@ To power off the disks
 
 Disks are mounted under `/media/username` - TODO Check.
 
-KeyRing
-=======
+Key Ring - Storing Passwords Securely
+=====================================
 
 We don't want lots of email passwords and other secrets lying about in configuration files. A keyring program stores passwords (or other sensitive data) in an encrypted database, encrypted with a master password. The most common seems to be `gnome-keyring` which uses the derives a key from the login password to encrypt the data. Fortunately it can be used without pulling in anything else Gnome-related:
 
@@ -112,15 +118,12 @@ Also install `libsecret-tools` which allows access to the keyring using the `sec
 
     sudo apt install libsecret-tools
 
-PAM login setup adds an entry to `/etc/pam.d/common-password`. We also need entries in `common-auth`:
+The installation adds an entry to `/etc/pam.d/common-password`, but you need to do some additional configuration if you want to start the keyring daemon when you log in on the console [^pam-auth-update]. I removed the entry and editing the `/etc/pam.d/login` and `/etc/pam.d/passwd` files as described in the [Arch Linux Wiki](https://wiki.archlinux.org/index.php/GNOME/Keyring#PAM_method) [^gkr-pam-problems].
 
-    auth optional pam_gnome_keyring.so
+[^gkr-pam-problems]: Setting the PAM stuff up seems quite temperamental and I had some problems. For example, the keyring daemon would be started but the keyring wouldn't be unlocked on login and I would still be prompted for my password when it was needed. So far, I can also only get `secret-tool` to work from within X-Windows.
 
-and `common-session`:
+[^pam-auth-update]: There is a tool called `pam-auth-update` which adds (or removes) the gnome keyring entry automatically. I guess it only adds the password entry since I'm using the console rather than a standard gnome setup.
 
-    session optional pam_gnome_keyring.so auto_start
-
-TODO: Check this and add some footnotes on what the entries are supposed to do. Try to work out why the keyring isn't unlocked on login
 
 Email
 =====
@@ -141,7 +144,7 @@ And looked up in `.mbsyncrc`:
 
     PassCmd "secret-tool lookup gmail myaccount"
 
-and in `.msmtprc` [^msmptp-pass]:
+and in `.msmtprc` [^msmtp-pass]:
 
     passwordeval secret-tool lookup gmail myaccount | awk 1
 
@@ -158,18 +161,15 @@ TODO: http://mutt.postle.net/addresses/
 XMonad
 ======
 
-One of the reasons for switching systems was to be able to use XMonad. A tiling window manager just fits much better with a workflow which mostly involves using an editor and terminals.
+One of the reasons for switching systems was to be able to use [XMonad](http://xmonad.org). A tiling window manager just fits much better with a workflow which mostly involves using an editor and terminals. Indeed, it's hard to see the benefit of having to adjust window positions and sizes manually in any kind of workflow.
 
 The required packages:
 
     sudo apt install xmonad dmenu xmobar xinit rxvt-unicode-256 x11-xserver-utils
 
-which should start up XMonad as the window manager when the `startx` command is run [^xinit]. This means the inital login still takes place on the console, which I prefer.
+Inital login still takes place on the console, which I prefer, but XMonad will be started when you run the `startx` command. You can customize the startup process by writing your own `.xinitrc` file [^xinit]. TODO: link dotfiles.
 
-[^xinit]: The default setup ends up running the script `/usr/bin/x-session-manager` which starts xmonad. For more information on the startup sequence, see the `startx` man page.
-
-TODO: Try without default xinitrc (i.e. write our own and call xmonad in it)
-TODO: Work out how /usr/bin/x-session-manager gets created (it's not part of xmonad package).
+[^xinit]: The default setup sources the files in `/etc/X11/Xsession.d` and ends up by running the script `/usr/bin/x-session-manager` which starts xmonad. For more information on the startup sequence, see the `startx` man page.
 
 I also installed the font packages `fonts-inconsolata` for use in the console and `fonts-wqy-zenhei` for Chinese support.
 
@@ -182,26 +182,64 @@ urxvt
 TODO: Overview of customizations for urxvt in .Xdefaults, use as a daemon.
 
 
-
 Sound
 =====
 
-I'm still learning about how the sound system works on Linux, but I installed the following packages
+I'm still learning how the sound system works on Linux, but I installed the following packages
 
 * `alsa-utils` command line utils for setting the volume and so on. Useful for binding to keys in `xmonad.hs`
-* `sox` to be able to play and record from the command line (this duplicates some functionality in `alsa-utils` so may not be neededjkA.)
+* `sox` to be able to play and record from the command line (this duplicates some functionality in `alsa-utils` so may not be needed)
 
 Music
 =====
 
-I've always detested iTunes. It's always been a dreadful music player and the one thing I missed when I switch from Windows to OSX was WinAMP. For years iTunes didn't even have a simple "add to queue" feature and it only plays Apple approved file formats. These days its priorities are acting as a front end to the app store and to your iPhone (which I don't have).
+I've always detested iTunes. It's always been a dreadful music player and the only thing I missed when I switch from Windows to OSX was the Winamp music player. For years iTunes didn't even have a simple "add to queue" feature and it only plays Apple approved file formats. These days its priorities are acting as a front end to the app store and as a file manager for your iPhone (which I don't have).
 
-Unsurprisingly there are plenty of music players on Linux. My favourite was [`cmus`](https://cmus.github.io/) which is a really nice terminal application with simple interface. The only customization I made was to set the colour scheme to "zenburn". It's also available on OSX via homebrew, so iTunes is history.
+Unsurprisingly there are plenty of music players on Linux. My favourite was [`cmus`](https://cmus.github.io/) which is a really nice terminal application with simple interface. The only customization I made was to set the colour scheme to "zenburn". It's also available on OSX via homebrew, so iTunes is history. Good riddance.
+
+Image Handling
+==============
+
+Editing
+-------
+
+[Gimp](https://www.gimp.org/) is an obvious choice if you want to edit images. It as an optional dependency on the package `tcpd` which seems unnecessary. I also installed the `imagemagick` package which has lots of useful command line tools.
+
+    sudo apt install --no-install-recommends gimp
+    sudo apt install imagemagick
+
+Gimp 2.8 comes with a single-window mode which works much better with XMonad tiling. This isn't the default, so you need to select it from the `Windows` menu or the tool windows will look weird.
+
+Managing Photo Collections
+--------------------------
+
+Loading and viewing photos is another requirement. My current choice is `gThumb` which seems to do everything I need and has fewer dependencies than the other major competitors I looked at.
+
+    sudo apt install --no-install-recommends gthumb
+
+TODO: Check import from camera and phone.
+
+IRC and Instant Messaging
+=========================
+
+A lot of messaging these days takes place on phones and I'm fine with moving that way too, but there's a limit to how much I want to type on a phone. I still spend a lot of time in front of a computer and chat apps are pretty much essential if you collaborate with others remotely. I use Google chat with quite a few people so I needed a replacement for it. [Profanity](http://www.profanity.im) is an XMPP client which seems to work well. It's another simple terminal application, based on the IRC client [IRSSI](https://irssi.org). TODO. Set up IRSSI too.
+
+
+I do still have a lot of contacts in Skype but I don't use it as much as I used to and I haven't checked out the Linux version yet.
+
+TODO: Signal desktop etc?
+
+Chinese Input on Linux
+======================
+
+I've been learning (and re-learning) Chinese for a long time and the pinyin input method on OSX is very handy for people like me who can pronounce and recognise some characters, but not necessarily write them from memory.
+
+TODO.
 
 
 Conclusions
 ===========
 
-So far, I'm pretty happy with my setup. There have been benefits I expect and also some things I like which I hadn't anticpated. I have a simple system with the bare minimum of installed packages to do what I want - there's none of the extra garbage that vendors feel the need to clutter their latest offerings with to attract attention. I had to learn various new commands to allow me to do things which would normally be done through a UI, but in the long term this is often more efficient. It's certainly no worse than having to remember the different "control panel" locations and sequences of menu items which a UI layers on top. Using the command line directly strips away this extra obfuscation and the knowledge is more portable than familiarity with different window-based utilities.
+So far, I'm pretty happy with my setup. There have been benefits I expect and also some things I like which I hadn't anticipated. I have a simple system with the bare minimum of installed packages to do what I want - there's none of the extra garbage that vendors feel the need to clutter their latest offerings with to attract attention. I had to learn various new commands to allow me to do things which would normally be done through a UI, but in the long term this is often more efficient. It's certainly no worse than having to remember the different "control panel" locations and sequences of menu items which a UI layers on top. Using the command line directly strips away this extra obfuscation and the knowledge is more portable than familiarity with different window-based utilities.
 
 Working with XMonad is much nicer, particularly for programming, where a tiling window manager comes into its own. It's easy to fire up a terminal next to or below your current window without losing focus of what you were looking at before, whether it's a browser page or something in your editor. Working with multiple desktops and shunting windows between them quickly becomes a normal part of your workflow. It's all super fast, without distractions such as animations, notification bars and so on. Since I never setup `mbsync` to pull down mail automatically, I also find that I now prefer to only read email when I choose, so there are no push notifications in the system at all and thus no interruptions when I'm working on something.
