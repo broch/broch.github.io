@@ -23,7 +23,7 @@ Networking
 
 The installation was done with an ethernet connection and if this is missing on a subsequent boot, the system will hang waiting for the connection to come up [^net-timeout]. By default, the static network configuration is read from the file `/etc/network/interfaces`, but for a laptop, this isn't ideal, as the available networks may change and you probably want to be able to connect to different WIFI networks depending on where you are. The `network-manager` package is a common solution. First comment out everything but the `lo` interface in the `/etc/network/interfaces` file:
 
-[^net-timeout]: There is a timeout configured somewhere which I changed the first time I ran into the problem, but I can't find the file anymore, so this is a TODO. In any case it doesn't matter once the ethernet settings have been removed from `/etc/network/interfaces`.
+[^net-timeout]: There is a timeout configured somewhere which I changed the first time I ran into the problem, but I can't find the file anymore. In any case it doesn't matter once the ethernet settings have been removed from `/etc/network/interfaces`.
 
 ```
 # The loopback network interface
@@ -153,10 +153,13 @@ and in `.msmtprc` [^msmtp-pass]:
 Mail Address Lookup
 -------------------
 
-When sending emails, programs will usually be able to lookup addresses either in a system address book or their own custom lists. With mutt, you need to decide how you want to maintain your contacts and tell it how to look them up.
+When sending emails, programs will usually be able to lookup addresses either in a system address book or their own custom lists. With mutt, you need to decide how you want to maintain your contacts and tell it how to look them up. You can use a simple alias list, or [set up an external query command](https://wiki.archlinux.org/index.php/Mutt#Contact_management). I'm using `abook`, which is a step up up from simple aliases but still very basic. You can use it to query addresses and to add them directly from within mutt. I have the following added to my `.muttrc` file
 
-TODO: http://mutt.postle.net/addresses/
+    set query_command="abook --mutt-query '%s'"
 
+    macro index,pager a "| abook --add-email\n"
+
+The macro bound to 'a' overrides the default `create-alias` command. You can bind it to something else if you want.
 
 XMonad
 ======
@@ -173,13 +176,10 @@ Inital login still takes place on the console, which I prefer, but XMonad will b
 
 I also installed the font packages `fonts-inconsolata` for use in the console and `fonts-wqy-zenhei` for Chinese support.
 
-I didn't need to do much to customize XMonad. I added some key mappings to make the volume control keys work, some shortcut keys, and set `urxvt` to be the terminal, but other than that it's a very standard setup. `XMobar` provides a simple menu bar (which I can easily hide whenever I want) and `dmenu` makes it easy to run an application by typing its name (it provides completion in the menu bar area). TODO: Link to dotfiles.
+I didn't need to do much to customize XMonad. I added some key mappings to make the volume control keys work, some shortcut keys, and set `urxvt` to be the terminal, but other than that it's a very standard setup [^xresources]. `XMobar` provides a simple menu bar (which I can easily hide whenever I want) and `dmenu` makes it easy to run an application by typing its name (it provides completion in the menu bar area). TODO: Link to dotfiles.
 
 
-urxvt
------
-
-TODO: Overview of customizations for urxvt in .Xdefaults, use as a daemon.
+[^xresources]: Details of fonts and other customizations for urxvt can be found in the .Xdefaults file. TODO link dotfiles
 
 
 Sound
@@ -224,7 +224,6 @@ IRC and Instant Messaging
 
 A lot of messaging these days takes place on phones and I'm fine with moving that way too, but there's a limit to how much I want to type on a phone. I still spend a lot of time in front of a computer and chat apps are pretty much essential if you collaborate with others remotely. I use Google chat with quite a few people so I needed a replacement for it. [Profanity](http://www.profanity.im) is an XMPP client which seems to work well. It's another simple terminal application, based on the IRC client [IRSSI](https://irssi.org). TODO. Set up IRSSI too.
 
-
 I do still have a lot of contacts in Skype but I don't use it as much as I used to and I haven't checked out the Linux version yet.
 
 TODO: Signal desktop etc?
@@ -234,8 +233,32 @@ Chinese Input on Linux
 
 I've been learning (and re-learning) Chinese for a long time and the pinyin input method on OSX is very handy for people like me who can pronounce and recognise some characters, but not necessarily write them from memory.
 
-TODO.
+The [`fcitx`](http://fcitx-im.org/) package seems to be pretty much the standard and I found it easy enough to install and get working.
 
+    sudo apt install fcitx fcitx-pinyin
+
+You can add other input methods as desired, for example:
+
+    sudo apt install fcitx-table-wubi fcitx-sunpinyin fcitx-googlepinyin
+
+and choose which ones are enabled using `fcitx-configtool` or by editing the file `~/.config/fcitx/profile`.
+
+This was enough to get pinyin input working in all applications I tried (and the terminal) apart from Emacs, for which there is a [specific workaround](https://wiki.archlinux.org/index.php/Fcitx#Emacs).
+
+Adding Chinese Locale
+---------------------
+
+Running `locale -a` showed that only English locales were available. To add simplified Chinese run:
+
+    sudo locale-gen zh_CN.UTF-8
+
+You can do this for any of the locales listed in `/usr/shared/i18n/SUPPORTED`.
+
+I have a shortcut in my `xmonad.hs` for running emacs. I changed this to set the variable beforehand:
+
+    ((mod4Mask, xK_s), spawn "LC_TYPE='zh_CN.UTF-8' emacs24-x")
+
+and `fcitx` then works in Emacs too (你看得见吗？). Emacs also has its own Chinese input method support which I might look into later.
 
 Conclusions
 ===========
