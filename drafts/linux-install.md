@@ -71,7 +71,7 @@ You can also edit or delete existing connections. There are also terminal-based 
 
 The connections are stored as files in the `/etc/NetworkManager/system-connections` directory. Note that the passwords are stored in plain text in these files. I don't mind this since none of the WIFI connections I use are very secret [^nm-gkr].
 
-[^nm-gkr]: NetworkManager can apparently integrate with gnome keyring, but I haven't got this working yet. Setting `psk-flags=1` means a user secret agent will be asked for the password (see `man nm-settings`) but I don't know how this takes place yet. Supposedly it normally delegates to `nm-applet` but I don't have the gnome parts installed so this isn't an option. A workaround is to remove the `psk` entry from the connection file and get `nmcli` to ask you to enter the password: `nmcli --ask connection up Cafe`. It is also possible to run `nmcli agent` in another terminal window as the secret agent, but you still have to enter the password yourself. There may be other programs out there which will fulfil this role.
+[^nm-gkr]: NetworkManager can be integrated with gnome keyring, using a [`SecretAgent`](https://developer.gnome.org/NetworkManager/stable/gdbus-org.freedesktop.NetworkManager.SecretAgent.html) service. Setting `psk-flags=1` means a user secret agent will be asked for the password (see `man nm-settings`). The `nm-applet` application from the package `network-manager-gnome`implements the required service interface. It will ask the user for the password on demand and store it for late use in the keyring. If you don't instal this, a workaround is to remove the `psk` entry from the connection file and get `nmcli` to ask you to enter the password: `nmcli --ask connection up Cafe`.
 
 
 Managing External Disks
