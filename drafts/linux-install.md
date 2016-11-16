@@ -77,12 +77,12 @@ The connections are stored as files in the `/etc/NetworkManager/system-connectio
 Managing External Disks
 =======================
 
-The `udisks2` package seems to be the back-end which most filesystem management tools (e.g. Nautilus) use to deal with hotplugging of USB disks, so I installed this. It comes with a command line program `udiskctl`.
+The `udisks2` package seems to be the back-end which most filesystem management tools (e.g. Nautilus) use to deal with hotplugging of USB disks, so I installed this. It comes with a command line program `udisksctl`.
 
 To list devices
 
 ```
-$ udiskctl status
+$ udisksctl status
 MODEL             REVISION    SERIAL          DEVICE
 -------------------------------------------------
 Databar           5.00        07ABC           sda
@@ -91,21 +91,21 @@ Databar           5.00        07ABC           sda
 
 To find out more about a device
 
-    udiskctl info -b /dev/sda
+    udisksctl info -b /dev/sda
 
 To mount a filesystem
 
-    udiskctl mount -b /dev/sda1
+    udisksctl mount -b /dev/sda1
 
 To unmount it
 
-    udiskctl unmount -b /dev/sda1
+    udisksctl unmount -b /dev/sda1
 
 To power off the disks
 
-    udiskctl power-off -b /dev/sda
+    udisksctl power-off -b /dev/sda
 
-Disks are mounted under `/media/username` - TODO Check.
+Disks are mounted under `/media/<username>/`.
 
 Key Ring - Storing Passwords Securely
 =====================================
@@ -217,16 +217,16 @@ Loading and viewing photos is another requirement. My current choice is `gThumb`
 
     sudo apt install --no-install-recommends gthumb
 
-TODO: Check import from camera and phone.
+I haven't been able to get it to download images from my phone yet, but I can do so using the command line tool `gphoto2`. For example, to download all files from a specific folder I use:
+
+    gphoto2 -f /store_00010001/DCIM/Camera -P
 
 IRC and Instant Messaging
 =========================
 
 A lot of messaging these days takes place on phones and I'm fine with moving that way too, but there's a limit to how much I want to type on a phone. I still spend a lot of time in front of a computer and chat apps are pretty much essential if you collaborate with others remotely. I use Google chat with quite a few people so I needed a replacement for it. [Profanity](http://www.profanity.im) is an XMPP client which seems to work well. It's another simple terminal application, based on the IRC client [IRSSI](https://irssi.org). TODO. Set up IRSSI too.
 
-I do still have a lot of contacts in Skype but I don't use it as much as I used to and I haven't checked out the Linux version yet.
-
-TODO: Signal desktop etc?
+I do still have a lot of contacts in Skype but I don't use it as often as I used to and I haven't checked out the Linux version yet.
 
 Chinese Input on Linux
 ======================
@@ -252,11 +252,11 @@ Running `locale -a` showed that only English locales were available. To add simp
 
     sudo locale-gen zh_CN.UTF-8
 
-You can do this for any of the locales listed in `/usr/shared/i18n/SUPPORTED`.
+You can do this for any of the locales listed in `/usr/share/i18n/SUPPORTED`.
 
 I have a shortcut in my `xmonad.hs` for running emacs. I changed this to set the variable beforehand:
 
-    ((mod4Mask, xK_s), spawn "LC_TYPE='zh_CN.UTF-8' emacs24-x")
+    ((mod4Mask, xK_s), spawn "LC_CTYPE='zh_CN.UTF8' emacs24-x")
 
 and `fcitx` then works in Emacs too (你看得见吗？). Emacs also has its own Chinese input method support which I might look into later.
 
