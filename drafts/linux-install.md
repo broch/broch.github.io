@@ -161,8 +161,8 @@ When sending emails, programs will usually be able to lookup addresses either in
 
 The macro bound to 'a' overrides the default `create-alias` command. You can bind it to something else if you want.
 
-XMonad
-======
+XWindows and XMonad
+===================
 
 One of the reasons for switching systems was to be able to use [XMonad](http://xmonad.org). A tiling window manager just fits much better with a workflow which mostly involves using an editor and terminals. Indeed, it's hard to see the benefit of having to adjust window positions and sizes manually in any kind of workflow.
 
@@ -170,16 +170,24 @@ The required packages:
 
     sudo apt install xmonad dmenu xmobar xinit rxvt-unicode-256 x11-xserver-utils
 
-Inital login still takes place on the console, which I prefer, but XMonad will be started when you run the `startx` command. You can customize the startup process by writing your own `.xinitrc` file [^xinit]. TODO: link dotfiles.
+Initial login still takes place on the console, which I prefer, but XMonad will be started when you run the `startx` command. You can customize the startup process by [writing your own `.xinitrc` file](https://github.com/tekul/dotfiles/blob/master/xinitrc) [^xinit].
 
 [^xinit]: The default setup sources the files in `/etc/X11/Xsession.d` and ends up by running the script `/usr/bin/x-session-manager` which starts xmonad. For more information on the startup sequence, see the `startx` man page.
 
 I also installed the font packages `fonts-inconsolata` for use in the console and `fonts-wqy-zenhei` for Chinese support.
 
-I didn't need to do much to customize XMonad. I added some key mappings to make the volume control keys work, some shortcut keys, and set `urxvt` to be the terminal, but other than that it's a very standard setup [^xresources]. `XMobar` provides a simple menu bar (which I can easily hide whenever I want) and `dmenu` makes it easy to run an application by typing its name (it provides completion in the menu bar area). TODO: Link to dotfiles.
+I didn't need to do much to [customize XMonad](https://github.com/tekul/dotfiles/blob/master/xmonad/xmonad.hs). I added some key mappings to make the volume control keys work, some shortcut keys, and set `urxvt` to be the terminal, but other than that it's a very standard setup [^xdefaults]. `XMobar` provides a simple menu bar (which I can easily hide whenever I want) and `dmenu` makes it easy to run an application by typing its name (it is bound to the `Mod-p` key by default and provides text completion in the menu bar area).
 
+[^xdefaults]: Details of fonts and other customizations for urxvt can be found in the [.Xdefaults file](https://github.com/tekul/dotfiles/blob/master/Xdefaults).
 
-[^xresources]: Details of fonts and other customizations for urxvt can be found in the .Xdefaults file. TODO link dotfiles
+Touchpad Sensitivity
+---------------------
+
+The sensitivity of the touchpad can cause problems because you can accidentally brush against it and change focus while you are tying, either to a different point in the same file or to another window altogether. Needless to say this is very annoying. There are tools such as `syndaemon` which disables the touchpad while you are typing and there are also settings to adjust the sensitivity, but I still found this to be an issue so I just disabled the touchpad by adding
+
+    synclient TouchPadOff=1
+
+to my `.xinitrc` file.
 
 
 Sound
@@ -200,8 +208,9 @@ Unsurprisingly there are plenty of music players on Linux. My favourite was [`cm
 Image Handling
 ==============
 
-Editing
--------
+Viewing and Editing
+-------------------
+[feh](https://feh.finalrewind.org/) is a command line tool which displays images in a simple window. It's handy if you're working in the terminal and generating images or graphs which you want to view immediately.
 
 [Gimp](https://www.gimp.org/) is an obvious choice if you want to edit images. It as an optional dependency on the package `tcpd` which seems unnecessary. I also installed the `imagemagick` package which has lots of useful command line tools.
 
@@ -224,7 +233,7 @@ I haven't been able to get it to download images from my phone yet, but I can do
 IRC and Instant Messaging
 =========================
 
-A lot of messaging these days takes place on phones and I'm fine with moving that way too, but there's a limit to how much I want to type on a phone. I still spend a lot of time in front of a computer and chat apps are pretty much essential if you collaborate with others remotely. I use Google chat with quite a few people so I needed a replacement for it. [Profanity](http://www.profanity.im) is an XMPP client which seems to work well. It's another simple terminal application, based on the IRC client [IRSSI](https://irssi.org). TODO. Set up IRSSI too.
+A lot of messaging these days takes place on phones and I'm fine with moving that way too, but there's a limit to how much I want to type on a phone. I still spend a lot of time in front of a computer and chat apps are pretty much essential if you collaborate with others remotely. I use Google chat with quite a few people so I needed a replacement for it. [Profanity](http://www.profanity.im) is an XMPP client which seems to work well. It's another simple terminal application, based on the IRC client [IRSSI](https://irssi.org). IRSSI was also easy to get running with my existing freenode account.
 
 I do still have a lot of contacts in Skype but I don't use it as often as I used to and I haven't checked out the Linux version yet.
 
@@ -258,7 +267,7 @@ I have a shortcut in my `xmonad.hs` for running emacs. I changed this to set the
 
     ((mod4Mask, xK_s), spawn "LC_CTYPE='zh_CN.UTF8' emacs24-x")
 
-and `fcitx` then works in Emacs too (你看得见吗？). Emacs also has its own Chinese input method support which I might look into later.
+and `fcitx` then works in Emacs too (你看得见吗？). Emacs also has its own Chinese input method support but fcitx seems good enough for my needs.
 
 Conclusions
 ===========
