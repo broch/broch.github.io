@@ -267,11 +267,18 @@ I have a shortcut in my `xmonad.hs` for running emacs. I changed this to set the
 
     ((mod4Mask, xK_s), spawn "LC_CTYPE='zh_CN.UTF8' emacs24-x")
 
-and `fcitx` then works in Emacs too (你看得见吗？). Emacs also has its own Chinese input method support but fcitx seems good enough for my needs.
+and `fcitx` then works in Emacs too (你看得见吗？). Emacs also has its own Chinese input method support but fcitx seems good enough for me.
+
+Further Resources
+=================
+
+Most of the above was of course pilfered from other sources. Many of the programs I've mentioned have excellent websites and documentation and I found the [Arch Linux Wiki](https://wiki.archlinux.org/) really useful. Lots of people have also uploaded their configuration files to [github](https://github.com/) and you can easily find relevant material there using github's source search. This is great both for tuning your own files and for finding out about other useful things that people are using [^srndpty].
+
+[^srndpty]: This is how I found out about `cmus`, for example. I think it was [in this repo](https://github.com/ssh0/dotfiles).
 
 Conclusions
 ===========
 
-So far, I'm pretty happy with my setup. There have been benefits I expect and also some things I like which I hadn't anticipated. I have a simple system with the bare minimum of installed packages to do what I want - there's none of the extra garbage that vendors feel the need to clutter their latest offerings with to attract attention. I had to learn various new commands to allow me to do things which would normally be done through a UI, but in the long term this is often more efficient. It's certainly no worse than having to remember the different "control panel" locations and sequences of menu items which a UI layers on top. Using the command line directly strips away this extra obfuscation and the knowledge is more portable than familiarity with different window-based utilities.
+So far, I'm pretty happy with my setup. There have been benefits I expected and also some things I like which I hadn't anticipated. I have a simple system with the bare minimum of installed packages to do what I want - there's none of the extra garbage that vendors feel the need to clutter their latest offerings with to attract attention. I had to learn various new commands to allow me to do things which would normally be done through a UI, but in the long term this is often more efficient. It's certainly no worse than having to remember the different "control panel" locations and sequences of menu items which a UI layers on top. Using the command line directly strips away this extra obfuscation and the knowledge is more portable than familiarity with different window-based utilities.
 
 Working with XMonad is much nicer, particularly for programming, where a tiling window manager comes into its own. It's easy to fire up a terminal next to or below your current window without losing focus of what you were looking at before, whether it's a browser page or something in your editor. Working with multiple desktops and shunting windows between them quickly becomes a normal part of your workflow. It's all super fast, without distractions such as animations, notification bars and so on. Since I never setup `mbsync` to pull down mail automatically, I also find that I now prefer to only read email when I choose, so there are no push notifications in the system at all and thus no interruptions when I'm working on something.
