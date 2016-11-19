@@ -1,7 +1,7 @@
 ---
 title: Linux Setup with XMonad
 author: Luke
-date: 2016-11-30
+date: 2016-11-19
 tags: linux,xmonad
 ---
 
