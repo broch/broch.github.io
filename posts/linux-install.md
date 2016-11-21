@@ -57,7 +57,7 @@ To switch WIFI off
 
     nmcli radio wifi off
 
-Connections are created in `/etc/NetworkManager/system-connections`. To list all know connections
+To list all known connections
 
     nmcli connection show
 
@@ -65,9 +65,7 @@ To delete connections
 
     nmcli connection delete name_or_id
 
-You can also edit or delete existing connections. There are also terminal-based editors and a dmenu option for interacting with NetworkManager, but I haven't looked at those.
-
-The connections are stored as files in the `/etc/NetworkManager/system-connections` directory. Note that the passwords are stored in plain text in these files. I don't mind this since none of the WIFI connections I use are very secret [^nm-gkr].
+You can also edit or delete existing connections. Connections are stored as files in the `/etc/NetworkManager/system-connections` directory. Note that the passwords are stored in plain text in these files. I don't mind this since none of the WIFI connections I use are very secret [^nm-gkr].
 
 [^nm-gkr]: NetworkManager can be integrated with gnome keyring, using a [`SecretAgent`](https://developer.gnome.org/NetworkManager/stable/gdbus-org.freedesktop.NetworkManager.SecretAgent.html) service. Setting `psk-flags=1` means a user secret agent will be asked for the password (see `man nm-settings`). The `nm-applet` application from the package `network-manager-gnome`implements the required service interface. It will ask the user for the password on demand and store it for late use in the keyring. If you don't install this, a workaround is to remove the `psk` entry from the connection file and get `nmcli` to ask you to enter the password: `nmcli --ask connection up Cafe`. I also had a go at [writing my own SecretAgent](https://github.com/tekul/nm-agent) to try out the Haskell `dbus` and `gnome-keyring` libraries.
 
@@ -114,7 +112,7 @@ Also install `libsecret-tools` which allows access to the keyring using the `sec
 
     sudo apt install libsecret-tools
 
-The installation adds an entry to `/etc/pam.d/common-password`, but you need to do some additional configuration if you want to start the keyring daemon when you log in on the console [^pam-auth-update]. I removed the entry and editing the `/etc/pam.d/login` and `/etc/pam.d/passwd` files as described in the [Arch Linux Wiki](https://wiki.archlinux.org/index.php/GNOME/Keyring#PAM_method) [^gkr-pam-problems].
+The installation adds an entry to `/etc/pam.d/common-password`, but you need to do some additional configuration if you want to start the keyring daemon when you log in on the console [^pam-auth-update]. I removed the entry and edited the `/etc/pam.d/login` and `/etc/pam.d/passwd` files as described in the [Arch Linux Wiki](https://wiki.archlinux.org/index.php/GNOME/Keyring#PAM_method) [^gkr-pam-problems].
 
 [^gkr-pam-problems]: Setting the PAM stuff up seems quite temperamental and I had some problems. For example, the keyring daemon would be started but the keyring wouldn't be unlocked on login and I would still be prompted for my password when it was needed. So far, I can also only get `secret-tool` to work from within X-Windows.
 
@@ -179,7 +177,7 @@ The sensitivity of the touchpad can cause problems because you can accidentally 
 
     synclient TouchPadOff=1
 
-to my `.xinitrc` file.
+to my `.xinitrc` file. I also have a key mapping defined to toggle it on and off if I really want to use it.
 
 
 ## Sound
@@ -191,9 +189,9 @@ I'm still learning how the sound system works on Linux, but I installed the foll
 
 ## Music
 
-I've always detested iTunes. It's always been a dreadful music player and the only thing I missed when I switch from Windows to OSX was the Winamp music player. For years iTunes didn't even have a simple "add to queue" feature and it only plays Apple approved file formats. These days its priorities are acting as a front end to the app store and as a file manager for your iPhone (which I don't have).
+I've always detested iTunes. It's always been a dreadful music player and the only thing I missed when I switched from Windows to OSX was the Winamp music player. For years iTunes didn't even have a simple "add to queue" feature and it only plays Apple approved file formats. These days its priorities are acting as a front end to the app store and as a file manager for your iPhone (which I don't have).
 
-Unsurprisingly there are plenty of music players on Linux. My favourite was [`cmus`](https://cmus.github.io/) which is a really nice terminal application with simple interface. The only customization I made was to set the colour scheme to "zenburn". It's also available on OSX via homebrew, so iTunes is history. Good riddance.
+Unsurprisingly there are plenty of music players on Linux. My favourite was [`cmus`](https://cmus.github.io/) which is a really nice terminal application with a very simple interface. The only customization I made was to set the colour scheme to "zenburn". It's also available on OSX via homebrew, so iTunes is history. Good riddance.
 
 ## Image Handling
 
