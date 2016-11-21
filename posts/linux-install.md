@@ -11,6 +11,8 @@ Earlier this year, after many years of using OSX, I decided to switch to using L
 
 I'd maintained small Linux server installations for many years, and am happy enough setting up postfix or nginx, but I'd never really used Linux as a desktop environment. I wanted to use a lightweight XMonad setup rather than a stock distro desktop installation, which meant having to find out about a lot of things that would otherwise be taken care of automatically, but the result is that I have a simpler system and also a better understanding of how it actually works.
 
+![XMonad up and running](xmonad-desktop.jpg)
+
 This article describes the installation process, things I discovered along the way, and how I got to where I wanted to be (or near enough).
 
 ## Install Ubuntu 16.04 Server
@@ -67,7 +69,7 @@ To delete connections
 
 You can also edit or delete existing connections. Connections are stored as files in the `/etc/NetworkManager/system-connections` directory. Note that the passwords are stored in plain text in these files. I don't mind this since none of the WIFI connections I use are very secret [^nm-gkr].
 
-[^nm-gkr]: NetworkManager can be integrated with gnome keyring, using a [`SecretAgent`](https://developer.gnome.org/NetworkManager/stable/gdbus-org.freedesktop.NetworkManager.SecretAgent.html) service. Setting `psk-flags=1` means a user secret agent will be asked for the password (see `man nm-settings`). The `nm-applet` application from the package `network-manager-gnome`implements the required service interface. It will ask the user for the password on demand and store it for late use in the keyring. If you don't install this, a workaround is to remove the `psk` entry from the connection file and get `nmcli` to ask you to enter the password: `nmcli --ask connection up Cafe`. I also had a go at [writing my own SecretAgent](https://github.com/tekul/nm-agent) to try out the Haskell `dbus` and `gnome-keyring` libraries.
+[^nm-gkr]: NetworkManager can be integrated with gnome keyring, using a [`SecretAgent`](https://developer.gnome.org/NetworkManager/stable/gdbus-org.freedesktop.NetworkManager.SecretAgent.html) service. Removing the `psk` and setting `psk-flags=1` in the connection file means a user secret agent will be asked for the password (see `man nm-settings`). The `nm-applet` application from the package `network-manager-gnome` implements the required service interface. It will ask the user for the password on demand and store it for late use in the keyring. If you don't install this, a workaround is to remove the `psk` entry from the connection file and get `nmcli` to ask you to enter the password: `nmcli --ask connection up Cafe`. I also had a go at [writing my own SecretAgent](https://github.com/tekul/nm-agent) to try out the Haskell `dbus` and `gnome-keyring` libraries.
 
 
 ## Managing External Disks

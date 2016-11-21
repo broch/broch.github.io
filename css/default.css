@@ -32,6 +32,15 @@ div#content {
     max-width: 800px;
 }
 
+.figure img {
+    max-width: 100%;
+}
+
+.figure .caption {
+    text-align: center;
+    font-style: italic;
+}
+
 div#logo {
     color: black;
     float: left;
@@ -83,4 +92,3 @@ div.info {
 div.info .updated {
   float: right;
 }
-
