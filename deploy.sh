@@ -51,6 +51,7 @@ setup() {
 
 deploy() {
   dir_check
+  [ -d deploy ] || fail 'deploy directory is missing - run setup first.'
 
   COMMIT=$(git log -1 HEAD --pretty=format:%H)
   SHA=${COMMIT:0:8}

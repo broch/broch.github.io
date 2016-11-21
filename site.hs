@@ -21,10 +21,14 @@ main = do
     args <- getArgs
     let isPreview action = action == "watch" || action == "preview"
         preview = not (null args) && isPreview (head args)
-        mdOrLhs d = d <> ("**.md" .||. "**.lhs")
-        postsPattern
-          | preview = mdOrLhs "posts/*" .||. mdOrLhs "drafts/*"
-          | otherwise = mdOrLhs "posts/*"
+        articleText = "**.md" .||. "**.lhs"
+        posts  = "posts/**"
+        drafts = "drafts/**"
+        postsDirs
+          | preview = posts .||. drafts
+          | otherwise = posts
+        postsPattern = postsDirs <> articleText
+        postsResources = postsDirs <> complement articleText
 
     hakyllWith config $ do
         match ("images/*" .||. "CNAME") $ do
@@ -48,6 +52,10 @@ main = do
                 >>= loadAndApplyTemplate "templates/post.html"    postCtx
                 >>= loadAndApplyTemplate "templates/default.html" postCtx
                 >>= relativizeUrls
+
+        match postsResources $ do
+            route idRoute
+            compile copyFileCompiler
 
         create ["archive.html"] $ do
             route idRoute
