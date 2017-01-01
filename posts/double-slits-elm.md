@@ -39,7 +39,7 @@ The code is [on github](https://github.com/tekul/elm-slits). Most of it is prett
 
 ## Overview
 
-The most important part of the model is the [list of slits](https://github.com/tekul/elm-slits/blob/4232544c5f5c74734ada4d81667b788c33044c7f/src/Model.elm#L27) which provides the zoomed-in view of the slit array. A slit is represented by the y coordinates of its edges. Changes to the slits cause updates both in their representation in the UI and in the diffraction pattern which is rendered. The model also contains a representation of the current drag state. This is similar to the standard [elm drag and drop example](http://elm-lang.org/examples/drag) but with a few changes to deal with the differences between the page and SVG coordinate systems. It contains the starting y-coordinate and the slit and also a `DragType` value. This captures the fact that a slit can be either moved or resized by dragging it, depending on whether you click nearer the middle or the edge. The coordinates of the slit array and the screen onto which the diffraction pattern is projected are also stored but are just fixed values.
+The most important part of the model is the [list of slits](https://github.com/tekul/elm-slits/blob/4232544c5f5c74734ada4d81667b788c33044c7f/src/Model.elm#L27) which provides the zoomed-in view of the slit array. A slit is represented by the y coordinates of its edges. Changes to the slits cause updates both in their representation in the UI and in the diffraction pattern which is rendered. The model also contains a representation of the current drag state. This is similar to the standard [elm drag and drop example](http://elm-lang.org/examples/drag) but with a few changes to deal with the differences between the page and SVG coordinate systems. It contains the starting y-coordinate, the slit being dragged and also a `DragType` value. This captures the fact that a slit can be either moved or resized by dragging it, depending on whether you click nearer the middle or the edge. The coordinates of the slit array and the screen onto which the diffraction pattern is projected are also stored but are just fixed values.
 
 ```elm
 type Slit = Slit Int Int
@@ -73,13 +73,13 @@ Since the slits are dragged vertically, we only need to worry about the y-coordi
 
 ### Interaction with Javascript
 
-If you look at the source for this page, you'll see that the select control for setting the number of slits isn't actually part of the Elm application (though it could easily be). I decided to experiment with using a [port](https://guide.elm-lang.org/interop/javascript.html) to update the value.` This is pretty straightforward. I just added the port, like so:
+If you look at the source for this page, you'll see that the select control for setting the number of slits isn't actually part of the Elm application (though it could easily be). I decided to experiment with using a [port](https://guide.elm-lang.org/interop/javascript.html) to update the value, like so:
 
 ```elm
 port numberOfSlits : (Int -> msg) -> Sub msg
 ```
 
-and [added a subscription](https://github.com/tekul/elm-slits/blob/4232544c5f5c74734ada4d81667b788c33044c7f/src/Main.elm#L66) to `numberOfSlits NumSlits`. The app then receives messages of type `NumSlits` and it can update the model accordingly. If Javascript tries to send in something invalid (not of the expected `Int` type), then Elm won't let it in and will log an error in the console.
+and I [added a subscription](https://github.com/tekul/elm-slits/blob/4232544c5f5c74734ada4d81667b788c33044c7f/src/Main.elm#L66) to `numberOfSlits NumSlits`. The app then receives messages of type `NumSlits` and it can update the model accordingly. If Javascript tries to send in something invalid (not of the expected `Int` type), then Elm won't let it in and will log an error in the console.
 <a href="javascript:void(0)" onclick="app.ports.numberOfSlits.send(10)">Clicking here</a>
 should change the number of slits to ten.
 
