@@ -3,6 +3,7 @@ title: Double-Slit Diffraction in Elm
 author: Luke
 date: 2017-01-02
 tags: elm,physics
+updated: 2017-02-16
 ---
 
 I've been meaning to try [Elm](htts://elm-lang.org) for some time and finally made the effort to actually write something. It's a demo of the [double-slits experiment](https://en.wikipedia.org/wiki/Double-slit_experiment). I already had some Java code which I wrote ages ago, but I've never got round to convering it to Javascript [^swatt]. Elm seems like a nice alternative so I decided to give it a try.
@@ -67,7 +68,7 @@ type Msg
 
 ### Dealing with Coordinates
 
-Since the slits are dragged vertically, we only need to worry about the y-coordinate of mouse events. However, we need the coordinate relative to the SVG element whereas Elm's mouse events are relative to the origin of the page [^elm-mouse]. This is fine if the application is in the top-left of the page, but if it is embedded in another page (as above), the coordinate systems no longer coincide and we need to translate between them. To do this, I created a transparent overlay rectangle which sits over the slits display, and attached a [separate `mousedown` handler](https://github.com/tekul/elm-slits/blob/b7ac4326b47b92e97500e88179032ed010dbd315/src/View.elm#L56) which creates a `DragStart` message containing both the `pageY` and [`offsetY`](https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/offsetY) values. Since the overlay rectangle covers the full height of the slits, `pageY - offsetY` gives the y-origin of the SVG element in page coordinates and that allows us to translate future mouse move events from Elm to our SVG frame of reference.
+Since the slits are dragged vertically, we only need to worry about the y-coordinate of mouse events. However, we need the coordinate relative to the SVG element whereas Elm's mouse events are relative to the origin of the page [^elm-mouse]. This is fine if the application is in the top-left of the page, but if it is embedded in another page (as above), the coordinate systems no longer coincide and we need to translate between them. To do this, I created a transparent overlay rectangle which sits over the slits display, and attached a [separate `mousedown` handler](https://github.com/tekul/elm-slits/blob/da067c50569cb45409e23ab1df5714ba38896fc1/src/View.elm#L62) which creates a `DragStart` message containing both the `pageY` and [`offsetY`](https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/offsetY) values. Since the overlay rectangle covers the full height of the slits, `pageY - offsetY` gives the y-origin of the SVG element in page coordinates and that allows us to translate future mouse move events from Elm to our SVG frame of reference.
 
 [^elm-mouse]: Elm gives us the value of the [`pageY`](https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/pageY) property of the mouse event.
 
