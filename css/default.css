@@ -1,0 +1,1 @@
+ .menu{min-height:4rem;max-height:0;transition:max-height 0.4s}#burger:checked ~ .menu{max-height:25rem}.h2-plus{height:2.5rem}a{color:#96281b;text-decoration:none}a:hover{text-decoration:underline}main p{line-height:1.25;font-size:1.25rem}

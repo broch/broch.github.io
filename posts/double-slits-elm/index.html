@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html class="h-100" lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>broch.io - Double-Slit Diffraction in Elm</title>
+        <link rel="stylesheet" href="https://unpkg.com/tachyons@4.9.1/css/tachyons.min.css" />
+        <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.6/css/all.css" />
+        <link rel="stylesheet" type="text/css" href="../../css/default.css" />
+        <link rel="stylesheet" type="text/css" href="../../css/syntax.css" />
+        <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-66865607-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+    </head>
+    <body class="h-100 sans-serif">
+        <nav class="w-100 tc fixed bg-white top-0 z-3 shadow-4">
+            <input id="burger" type="checkbox" class="absolute top-2 right-1 dn">
+            <label for="burger" class="dn-l pointer absolute top-1 right-1">
+                <i class="fas fa-bars dib near-black f2"></i>
+            </label>
+            <ul id="main-menu" class="overflow-hidden menu db-l w-100 list tc pl0 pt2 pt3-l mv0 f4 fw3">
+                <li class="absolute static-l top-3 pl3 pl0-l pr5 pt2 mh2 f4 f3-ns di-l">
+                    <a href="../../" class="link black fw4">
+                        <img class="h2-plus v-mid" alt="broch logo" src="../../images/broch.svg" />
+                        <span class="b">broch.io</span>
+                    </a>
+                </li>
+                <li class="ph4 pl5-l pr4-l di-l pt5 pb2 tl pv0-l"><a href="../../" class="link black dim">Home</a></li>
+                <!-- >li class="ph4 di-l pv2 tl pv0-l"><a href="/about.html" class="link black dim">About</a></li -->
+                <li class="ph4 di-l pv2 tl pv0-l"><a href="../../contact.html" class="link black dim">Contact</a></li>
+                <li class="ph4 di-l pv2 tl pv0-l"><a href="../../archive.html" class="link black dim">Archive</a></li>
+            </ul>
+        </nav>
+        <div class="h-100 pt5 mw7 center flex flex-column justify-between">
+            <main class="pa3">
+                <h1>Double-Slit Diffraction in Elm</h1>
+
+                <div class="gray i f5">
+Posted on January  2, 2017
+ by Luke 
+ <span class="fr">Updated February 16, 2017</span> 
+</div>
+
+<p>I’ve been meaning to try <a href="http://elm-lang.org">Elm</a> for some time and finally made the effort to actually write something. It’s a demo of the <a href="https://en.wikipedia.org/wiki/Double-slit_experiment">double-slits experiment</a>. I already had some Java code which I wrote ages ago, but I’ve never got round to converting it to Javascript <a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a>. Elm seems like a nice alternative so I decided to give it a try.</p>
+<div id="slits" style="width: 700px; margin: 0 auto;">
+
+</div>
+<div id="controls">
+<p><label for="numSlits">Number of slits</label> <select id="numSlits" onchange="changeSlits()"> <option value="1">1</option> <option value="2" selected>2</option> <option value="3">3</option> <option value="4">4</option> <option value="5">5</option> <option value="6">6</option> </select></p>
+</div>
+<script src="slits.js"></script>
+<script>
+    var node = document.getElementById('slits');
+    var flags = { width: 700, height: 500 }
+    var app = Elm.Main.embed(node, flags);
+    var nSlitsNode = document.getElementById('numSlits');
+    nSlitsNode.options[1].selected = true;
+    function changeSlits() {
+        app.ports.numberOfSlits.send(Number(nSlitsNode.value));
+    }
+</script>
+<p>The app shows the light source, slits and the screen with an intensity graph of the diffraction pattern. An enlarged representation of the slits is shown on the left. Slits can be dragged about or resized and the diffraction pattern updates accordingly. You can also change the number of slits, making this a rather poorly named article, but the double-slit case is the most famous.</p>
+<p>The code is <a href="https://github.com/tekul/elm-slits">on github</a>. Most of it is pretty easy to follow if you’ve read the standard <a href="https://guide.elm-lang.org/">introduction to elm</a>. It also includes some use of SVG and drag and drop and the use of ports to interact with the outside.</p>
+<h2 id="overview">Overview</h2>
+<p>The most important part of the model is the <a href="https://github.com/tekul/elm-slits/blob/4232544c5f5c74734ada4d81667b788c33044c7f/src/Model.elm#L27">list of slits</a> which provides the zoomed-in view of the slit array. A slit is represented by the y coordinates of its edges. Changes to the slits cause updates both in their representation in the UI and in the diffraction pattern which is rendered. The model also contains a representation of the current drag state. This is similar to the standard <a href="http://elm-lang.org/examples/drag">elm drag and drop example</a> but with a few changes to deal with the differences between the page and SVG coordinate systems. It contains the starting y-coordinate, the slit being dragged and also a <code>DragType</code> value. This captures the fact that a slit can be either moved or resized by dragging it, depending on whether you click nearer the middle or the edge. The coordinates of the slit array and the screen onto which the diffraction pattern is projected are also stored but are just fixed values.</p>
+<pre class="elm"><code>type Slit = Slit Int Int
+
+type Drag = Drag DragType Int Slit
+
+type alias Model =
+    { slits : List Slit
+    , slitsXY : (Int, Int)
+    , screen : Screen
+    , drag : Maybe Drag
+    }
+
+type DragType
+    = WholeSlit
+    | Bottom
+    | Top
+
+type Msg
+    = DragStart Int Int
+    | DragAt    Int
+    | DragEnd
+    | NumSlits Int</code></pre>
+<h3 id="dealing-with-coordinates">Dealing with Coordinates</h3>
+<p>Since the slits are dragged vertically, we only need to worry about the y-coordinate of mouse events. However, we need the coordinate relative to the SVG element whereas Elm’s mouse events are relative to the origin of the page <a href="#fn2" class="footnoteRef" id="fnref2"><sup>2</sup></a>. This is fine if the application is in the top-left of the page, but if it is embedded in another page (as above), the coordinate systems no longer coincide and we need to translate between them. To do this, I created a transparent overlay rectangle which sits over the slits display, and attached a <a href="https://github.com/tekul/elm-slits/blob/da067c50569cb45409e23ab1df5714ba38896fc1/src/View.elm#L62">separate <code>mousedown</code> handler</a> which creates a <code>DragStart</code> message containing both the <code>pageY</code> and <a href="https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/offsetY"><code>offsetY</code></a> values. Since the overlay rectangle covers the full height of the slits, <code>pageY - offsetY</code> gives the y-origin of the SVG element in page coordinates and that allows us to translate future mouse move events from Elm to our SVG frame of reference.</p>
+<h3 id="interaction-with-javascript">Interaction with Javascript</h3>
+<p>If you look at the source for this page, you’ll see that the select control for setting the number of slits isn’t actually part of the Elm application (though it could easily be). I decided to experiment with using a <a href="https://guide.elm-lang.org/interop/javascript.html">port</a> to update the value, like so:</p>
+<pre class="elm"><code>port numberOfSlits : (Int -&gt; msg) -&gt; Sub msg</code></pre>
+<p>and I <a href="https://github.com/tekul/elm-slits/blob/4232544c5f5c74734ada4d81667b788c33044c7f/src/Main.elm#L66">added a subscription</a> to <code>numberOfSlits NumSlits</code>. The app then receives messages of type <code>NumSlits</code> and it can update the model accordingly. If Javascript tries to send in something invalid (not of the expected <code>Int</code> type), then Elm won’t let it in and will log an error in the console. <a href="javascript:void(0)" onclick="app.ports.numberOfSlits.send(10)">Clicking here</a> should change the number of slits to ten.</p>
+<p>Elm “Flags” are also used to pass the desired width and height of the SVG into the application.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>This was a brief overview of my first go at playing with Elm. My Javascript knowledge is rather limited, and I haven’t tried out any of its competitors so I can’t really draw any conclusions on how Elm compares. It certainly compared favourable with my experience of writing even small programs in Javascript. It allows you to write typed programs, with a similar syntax to Haskell and it limits what can happen in your program, making debugging a lot easier. You can step back through all the events you’ve received and inspect the resulting changes in the model. Elm puts you in a cosy little world within your application, where you are completely isolated from nasty runtime errors. That worked out fine for a simple application like this one, but how well it scales up into more complicated applications, I don’t know yet. The next thing on my Elm to-do list is to build something that actually talks to a server.</p>
+<p>Any questions or suggestions, please <a href="https://github.com/tekul/elm-slits/issues">post them on github</a>.</p>
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p>When I was a student, my supervisor Sandy Watt wrote physics demo programs including one like this, and my Java code was based on his original version. His programs were written in Basic with embedded ARM code, but these days we can get away with a high-level language like Elm and rendering images with SVG without having to worry about performance.<a href="#fnref1">↩</a></p></li>
+<li id="fn2"><p>Elm gives us the value of the <a href="https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/pageY"><code>pageY</code></a> property of the mouse event.<a href="#fnref2">↩</a></p></li>
+</ol>
+</div>
+
+            </main>
+            <footer class="pb4 i gray tr">
+                Site generated by
+                <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+            </footer>
+        </div>
+    </body>
+</html>

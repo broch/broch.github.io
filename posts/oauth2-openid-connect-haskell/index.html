@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html class="h-100" lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>broch.io - OAuth2 and OpenID Connect in Haskell</title>
+        <link rel="stylesheet" href="https://unpkg.com/tachyons@4.9.1/css/tachyons.min.css" />
+        <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.6/css/all.css" />
+        <link rel="stylesheet" type="text/css" href="../../css/default.css" />
+        <link rel="stylesheet" type="text/css" href="../../css/syntax.css" />
+        <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-66865607-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+    </head>
+    <body class="h-100 sans-serif">
+        <nav class="w-100 tc fixed bg-white top-0 z-3 shadow-4">
+            <input id="burger" type="checkbox" class="absolute top-2 right-1 dn">
+            <label for="burger" class="dn-l pointer absolute top-1 right-1">
+                <i class="fas fa-bars dib near-black f2"></i>
+            </label>
+            <ul id="main-menu" class="overflow-hidden menu db-l w-100 list tc pl0 pt2 pt3-l mv0 f4 fw3">
+                <li class="absolute static-l top-3 pl3 pl0-l pr5 pt2 mh2 f4 f3-ns di-l">
+                    <a href="../../" class="link black fw4">
+                        <img class="h2-plus v-mid" alt="broch logo" src="../../images/broch.svg" />
+                        <span class="b">broch.io</span>
+                    </a>
+                </li>
+                <li class="ph4 pl5-l pr4-l di-l pt5 pb2 tl pv0-l"><a href="../../" class="link black dim">Home</a></li>
+                <!-- >li class="ph4 di-l pv2 tl pv0-l"><a href="/about.html" class="link black dim">About</a></li -->
+                <li class="ph4 di-l pv2 tl pv0-l"><a href="../../contact.html" class="link black dim">Contact</a></li>
+                <li class="ph4 di-l pv2 tl pv0-l"><a href="../../archive.html" class="link black dim">Archive</a></li>
+            </ul>
+        </nav>
+        <div class="h-100 pt5 mw7 center flex flex-column justify-between">
+            <main class="pa3">
+                <h1>OAuth2 and OpenID Connect in Haskell</h1>
+
+                <div class="gray i f5">
+Posted on May  2, 2016
+ by Luke 
+
+</div>
+
+<!--
+Run using:
+    stack ghci &minus;-ghci-options oauth2-openid-connect-haskell.lhs
+or compile with stack ghc
+-->
+<p>I’ve been working for a while on an implementation of the OpenID Connect specification. Since it was something I already knew quite a bit about from my previous job, it seemed like a good idea for a “real-world” Haskell project. The result is a project called “Broch” <a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a>, which is an OpenID Connect identity provider. Features include</p>
+<ul>
+<li>OAuth2 flows
+<ul>
+<li>Authorization endpoint</li>
+<li>Token endpoint</li>
+</ul></li>
+<li>OpenID Connect basic flows</li>
+<li>OpenID Connect hybrid flows</li>
+<li>OpenID Connect Discovery</li>
+<li>Support for signed and encrypted JWTs <a href="#fn2" class="footnoteRef" id="fnref2"><sup>2</sup></a></li>
+<li><a href="http://openid.net/specs/openid-connect-registration-1_0.html">Client Registration</a></li>
+<li>Client authentication
+<ul>
+<li>Basic authentication with client secret</li>
+<li><a href="https://tools.ietf.org/html/draft-ietf-oauth-jwt-bearer-12">JWT Bearer authentication</a></li>
+</ul></li>
+<li>ID Tokens (signed and/or encrypted)</li>
+<li><a href="http://openid.net/specs/openid-connect-core-1_0.html#SubjectIDTypes">Pairwise subject identifiers</a></li>
+<li>Server key management and rotation <a href="#fn3" class="footnoteRef" id="fnref3"><sup>3</sup></a></li>
+<li>SQLite back end</li>
+<li>PostgreSQL 9.5 back end</li>
+</ul>
+<p>You can easily get a prototype server up and running with default settings and it’s intended that the important features should be easily customized. This article is mostly an introduction to the project and the Haskell implementation. If you don’t know much about OAuth2 or OpenID Connect but are still interested, you should probably check out the <a href="http://openid.net/connect/faq/">OpenID Connect FAQ</a> first to get an overview.</p>
+<h1 id="the-command-line-executable">The Command Line Executable</h1>
+<p>In addition to the main library, the project build creates a <code>broch</code> executable which can be used to get up and running quickly. Instructions for building and running against a SQLite or PostgreSQL database can be found in the project <a href="https://github.com/tekul/broch/blob/master/README.md">readme file</a>. The <a href="https://github.com/tekul/broch/blob/master/broch-server/broch.hs">source code</a> is also a useful reference for building your own server application from scratch.</p>
+<h1 id="coding-a-minimal-server">Coding a Minimal Server</h1>
+<p>In many cases, you will want to write a customized server of your own. To do this, you create a configuration instance (<code>Broch.Server.Config</code>) and pass it to the <code>brochServer</code> function. The only things you <em>have</em> to supply are</p>
+<ul>
+<li>An “issuer” for the OpenID Provider. This is the external URL used to access your server, for example <code>https://myopenidserver.com</code>.</li>
+<li>A <code>Broch.Server.Config.KeyRing</code> instance to provide the signing and encryption keys for the server. The <code>defaultKeyRing</code> function can be used for this.</li>
+<li>A function to render an “approval” page, which allows the user to consent to the authorization request.</li>
+<li>A function to authenticate (or reauthenticate) a user.</li>
+<li>A function to provide the identity of the currently authenticated user.</li>
+<li>A means of supplying user information for OpenID authentication requests.</li>
+</ul>
+<p>Some standard options for authentication and user management are provided – you just need to select them in your configuration. Everything else in a simple test server can use default settings, in-memory storage and provided login handlers.</p>
+<p>The configured server uses WAI and can be run using the warp web server:</p>
+<div class="sourceCode"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="ot">{-# LANGUAGE OverloadedStrings #-}</span>
+
+<span class="kw">import </span><span class="dt">Data.Default.Generics</span> (def)
+<span class="kw">import qualified</span> <span class="dt">Data.Text</span> <span class="kw">as</span> <span class="dt">T</span>
+<span class="kw">import </span><span class="dt">Network.Wai.Middleware.RequestLogger</span> (logStdoutDev)
+<span class="kw">import </span><span class="dt">Network.Wai.Handler.Warp</span>
+<span class="kw">import </span><span class="dt">Web.Routing.TextRouting</span>
+
+<span class="kw">import </span><span class="dt">Broch.Model</span> (<span class="dt">Client</span>(..), <span class="dt">GrantType</span>(..), <span class="dt">Scope</span>(..), <span class="dt">UserInfo</span>(..))
+<span class="kw">import </span><span class="dt">Broch.Server.Config</span>
+<span class="kw">import </span><span class="dt">Broch.Server</span> (brochServer, authenticatedSubject, authenticateSubject, defaultLoginPage, defaultApprovalPage, passwordLoginHandler)
+<span class="kw">import </span><span class="dt">Broch.Server.Internal</span> (routerToApp, text, invalidateSession)
+<span class="kw">import </span><span class="dt">Broch.Server.Session</span> (defaultKey, defaultLoadSession)
+<span class="kw">import </span><span class="dt">Broch.URI</span> (parseURI)
+
+<span class="ot">main ::</span> <span class="dt">IO</span> ()
+main <span class="fu">=</span> <span class="kw">do</span>
+    sessionEncryptionKey <span class="ot">&lt;-</span> defaultKey
+    opKeys <span class="ot">&lt;-</span> defaultKeyRing
+    inMemory <span class="ot">&lt;-</span> inMemoryConfig <span class="st">&quot;http://localhost:3000&quot;</span> opKeys <span class="dt">Nothing</span>
+    <span class="kw">let</span> config <span class="fu">=</span> inMemory { authenticateResourceOwner <span class="fu">=</span> authenticate, getUserInfo <span class="fu">=</span> loadUserInfo }
+    createClient config testClient
+    <span class="kw">let</span> extraRoutes <span class="fu">=</span>
+          [ (<span class="st">&quot;/home&quot;</span>,   text <span class="st">&quot;Hello, I'm the home page&quot;</span>)
+          , (<span class="st">&quot;/login&quot;</span>,  passwordLoginHandler defaultLoginPage authenticate)
+          , (<span class="st">&quot;/logout&quot;</span>, invalidateSession <span class="fu">&gt;&gt;</span> text <span class="st">&quot;You have been logged out&quot;</span>)
+          ]
+        routingTable <span class="fu">=</span> foldl (\tree (r, h) <span class="ot">-&gt;</span> addToRoutingTree r h tree) (brochServer config defaultApprovalPage authenticatedSubject authenticateSubject) extraRoutes
+        waiApp <span class="fu">=</span> routerToApp (defaultLoadSession <span class="dv">3600</span> sessionEncryptionKey) (issuerUrl config) routingTable
+    run <span class="dv">3000</span> <span class="fu">$</span> logStdoutDev waiApp
+  <span class="kw">where</span>
+    <span class="dt">Right</span> uri <span class="fu">=</span> parseURI <span class="st">&quot;http://c123.client&quot;</span>
+    testClient <span class="fu">=</span> def
+      { clientId <span class="fu">=</span> <span class="st">&quot;123&quot;</span>
+      , clientSecret <span class="fu">=</span> <span class="dt">Just</span> <span class="st">&quot;abc123&quot;</span>
+      , authorizedGrantTypes <span class="fu">=</span> [<span class="dt">AuthorizationCode</span>]
+      , redirectURIs <span class="fu">=</span> [uri]
+      , allowedScope <span class="fu">=</span> [<span class="dt">OpenID</span>]
+      }
+    authenticate username password
+      <span class="fu">|</span> username <span class="fu">==</span> password <span class="fu">=</span> return (<span class="dt">Just</span> username)
+      <span class="fu">|</span> otherwise            <span class="fu">=</span> return <span class="dt">Nothing</span>
+
+    loadUserInfo uid _ <span class="fu">=</span> return <span class="fu">.</span> <span class="dt">Just</span> <span class="fu">$</span> def
+      { sub <span class="fu">=</span> uid
+      , email <span class="fu">=</span> <span class="dt">Just</span> (T.concat [uid, <span class="st">&quot;@someplace.com&quot;</span>])
+      }</code></pre></div>
+<p>The web code is similar to that in <a href="http://broch.io/posts/build-your-own-wai-framework/">an earlier article on WAI</a>, but includes the concept of a session, since users have to be able to authenticate to the authorization server. The <code>brochServer</code> function converts the configuration into a routing table, mapping URL paths to web handler functions and we add extra handlers for login/logout processing also to render a very basic home page. The <a href="hackage.haskell.org/package/reroute">reroute</a> package is used to build the routing table. The table is then converted into a WAI <code>Application</code> which we can run.</p>
+<p>We’ve added a single client which is allowed to use the authorization code flow and will use basic authentication (the default) at the token endpoint.</p>
+<p>Neither OAuth2 nor OpenID Connect define how authentication of the end user should take place at the authorization server, so user account data and authentication are decoupled from the core OpenID/OAuth2 functionality. Here we have used an authentication function which merely compares the username and password for equality, so there aren’t actually any user accounts – you can authenticate with any name. For “user info” requests, we’ve just added a function <code>loadUserInfo</code> to make up the data. In a real implementation, you would have a specific user data type and would write functions to manage user accounts and convert the data to the claims returned for a user info request <a href="#fn4" class="footnoteRef" id="fnref4"><sup>4</sup></a>. A side project is an implementation based on the SCIM specification <a href="#fn5" class="footnoteRef" id="fnref5"><sup>5</sup></a>.</p>
+<h2 id="database-backend">Database Backend</h2>
+<p>To add persistent storage, there are SQLite and PostgreSQL backs end available, which are built on top of the <code>sqlite-simple</code> and <code>postresql-simple</code> packages. These are used in the <a href="https://github.com/tekul/broch/blob/master/broch-server/broch.hs">command-line source</a> which you can examine along with the project readme for more details. We could swap from in-memory to using Postgres just by changing the configuration to</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">config <span class="ot">&lt;-</span> postgreSQLBackend pool <span class="fu">&lt;$&gt;</span> inMemoryConfig issuer opKeys <span class="dt">Nothing</span></code></pre></div>
+<p>where <code>pool</code> is a <code>Data.Pool</code> of Postgres <code>Connection</code> instances. The project has some SQL scripts for setting up the Postgres database schema. It requires Postgres 9.5 or later. The SQLite backend creates the schema as required.</p>
+<h1 id="authorization-code-flow-walk-through">Authorization Code Flow Walk-Through</h1>
+<p>Using the server above, we can work through a typical flow which a client application would use to authenticate a user. We’ll use <code>curl</code> to take the place of the client. All URLs would use HTTPS in a production system.</p>
+<p>The first step is a redirection from the client to the authorization server, which creates the <a href="http://localhost:3000/oauth/authorize?client_id=123&amp;state=982147&amp;response_type=code&amp;redirect_uri=http%3A%2F%2Fc123.client">following request</a> <a href="#fn6" class="footnoteRef" id="fnref6"><sup>6</sup></a>:</p>
+<pre><code>http://localhost:3000/oauth/authorize?client_id=123&amp;state=982147&amp;response_type=code&amp;scope=openid&amp;redirect_uri=http%3A%2F%2Fc123.client</code></pre>
+<p>The user will be asked to log in (if they aren’t already authenticated to the authorization server), and then to approve the request for <code>openid</code> scope. Once this is granted, the authorization server redirects back to the client application, with an authorization code:</p>
+<pre><code>http://c123.client/?state=982147&amp;code=14581d956c81535c&amp;scope=openid</code></pre>
+<p>The client then exchanges the code at the token endpoint for an <code>access_token</code> and an <code>id_token</code>, which are returned in a JSON response:</p>
+<pre><code>$ curl -u 123:abc123 -H &quot;Accept: application/json&quot; -X POST -d code=14581d956c81535c -d client_id=123 -d redirect_uri=http://c123.client -d grant_type=authorization_code http://localhost:3000/oauth/token
+{&quot;expires_in&quot;:3600,&quot;access_token&quot;:&quot;eyJhbGciOiJSU0EtT0FFUCIsImtpZCI6IjIwMTUtMDUtMTlUMjA6MjI6MjUuMTc2MjY1MDAwMDAwWiIsImVuYyI6IkExMjhHQ00ifQ.bESkEA-0vGBhnftPuRLYcxvZuD6xbdTrp4h34zBxsn0AhNgXxAOsMsvC-14YijuMBAU4SxkMsBoxL4P4vEWODGrVwK8xb0_OogyxsrCSRYiYwYopU3xli9k3Dw_LpP0vFC60r1oGGsGexeKsAYy9BwL5kGeTNt9GtnjI2Q-WnrA.oZvgWxUtv4-RNddd.xcaT8kydCGN4Oe_JH5QvFTxsE9YJMJ976b1PEAkHvjHj2xcEM1pE_3MCsEGOV7tSho6omNCJFZC_AiKfP2s4QBLvXxG9kMON7OIIjrx4FKDuTAoZgtl-4aiQ_mt-ppt2lVf0pr03cYTvoBzJK85ofMnNeLsnrjA3oGB-xGxXSG5ZKkyutNo.X4ncv5rOTTBOE6hdclpWYg&quot;,&quot;token_type&quot;:&quot;bearer&quot;,&quot;id_token&quot;:&quot;eyJhbGciOiJSUzI1NiIsImtpZCI6IjIwMTUtMDUtMTlUMjA6MjI6MjQuMTc2MjY1MDAwMDAwWiJ9.eyJzdWIiOiJjYXQiLCJleHAiOjE0MzIxMzkxMDgsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6MzAwMCIsImlhdCI6MTQzMjEzODEwOCwiYXV0aF90aW1lIjoxNDMyMTM3MTY5LCJhdWQiOlsiMTIzIl19.f_EJI-wiDT1oa0Cta12yco73BurkYTCR-yrxl3k5zsYO7wNrHc9y2QE-ahmkdsiHdlzCZ4roF7_fVXRMHL2JNsC3S6oyeWfO6E-8sjsTFBRvkDSOCbYwm7HnYW-VWZ1e2M8g_RgZb4SVzW4OK55QntRvlwW6Aj6Tu_AN6Dg7Ua4&quot;}</code></pre>
+<p>The <code>id_token</code> is defined by the spec to be a JWT. In this implementation, access tokens are also JWTs by default.</p>
+<p>The client can then use the access token to request more information about the user:</p>
+<pre><code>$ TOKEN=eyJhbGciOiJSU0EtT0FFUCIsImtpZCI6IjIwMTUtMDUtMTlUMjA6MjI6MjUuMTc2MjY1MDAwMDAwWiIsImVuYyI6IkExMjhHQ00ifQ.bESkEA-0vGBhnftPuRLYcxvZuD6xbdTrp4h34zBxsn0AhNgXxAOsMsvC-14YijuMBAU4SxkMsBoxL4P4vEWODGrVwK8xb0_OogyxsrCSRYiYwYopU3xli9k3Dw_LpP0vFC60r1oGGsGexeKsAYy9BwL5kGeTNt9GtnjI2Q-WnrA.oZvgWxUtv4-RNddd.xcaT8kydCGN4Oe_JH5QvFTxsE9YJMJ976b1PEAkHvjHj2xcEM1pE_3MCsEGOV7tSho6omNCJFZC_AiKfP2s4QBLvXxG9kMON7OIIjrx4FKDuTAoZgtl-4aiQ_mt-ppt2lVf0pr03cYTvoBzJK85ofMnNeLsnrjA3oGB-xGxXSG5ZKkyutNo.X4ncv5rOTTBOE6hdclpWYg
+$ curl -H &quot;Accept: application/json&quot; -H &quot;Authorization: Bearer $TOKEN&quot; http://localhost:3000/connect/userinfo
+{&quot;email&quot;:&quot;cat@someplace.com&quot;,&quot;sub&quot;:&quot;cat&quot;}</code></pre>
+<h1 id="configuration">Configuration</h1>
+<p>One of the design issues I had trouble with was the how best to build a configurable server application. It’s easy enough to come up with intelligent defaults for an OpenID Provider, but pretty much all the functionality needs to be pluggable <a href="#fn7" class="footnoteRef" id="fnref7"><sup>7</sup></a>. The <code>Broch.Server.Config</code> module contains data structures for settings which are used to initialize a server, and also functions which define pluggable behaviour</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">Config</span> m s <span class="fu">=</span> <span class="dt">Config</span>
+    {<span class="ot"> issuerUrl                  ::</span> <span class="dt">Text</span>
+    ,<span class="ot"> keyRing                    ::</span> <span class="dt">KeyRing</span> m
+    ,<span class="ot"> responseTypesSupported     ::</span> [<span class="dt">ResponseType</span>]
+    ,<span class="ot"> algorithmsSupported        ::</span> <span class="dt">SupportedAlgorithms</span>
+    ,<span class="ot"> clientAuthMethodsSupported ::</span> [<span class="dt">ClientAuthMethod</span>]
+    ,<span class="ot"> claimsSupported            ::</span> [<span class="dt">Text</span>]
+    ,<span class="ot"> createClient               ::</span> <span class="dt">CreateClient</span> m
+    ,<span class="ot"> getClient                  ::</span> <span class="dt">LoadClient</span> m
+    ,<span class="ot"> createAuthorization        ::</span> <span class="dt">CreateAuthorization</span> m s
+    ,<span class="ot"> getAuthorization           ::</span> <span class="dt">LoadAuthorization</span> m
+    ,<span class="ot"> authenticateResourceOwner  ::</span> <span class="dt">AuthenticateResourceOwner</span> m
+    ,<span class="ot"> createApproval             ::</span> <span class="dt">CreateApproval</span> m
+    ,<span class="ot"> getApproval                ::</span> <span class="dt">LoadApproval</span> m
+    ,<span class="ot"> createAccessToken          ::</span> <span class="dt">CreateAccessToken</span> m
+    ,<span class="ot"> decodeAccessToken          ::</span> <span class="dt">DecodeAccessToken</span> m
+    ,<span class="ot"> decodeRefreshToken         ::</span> <span class="dt">DecodeRefreshToken</span> m
+    ,<span class="ot"> getUserInfo                ::</span> <span class="dt">LoadUserInfo</span> m
+    }</code></pre></div>
+<p>The functions are type aliases, for example</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">
+<span class="kw">type</span> <span class="dt">LoadClient</span> m <span class="fu">=</span> <span class="dt">ClientId</span> <span class="ot">-&gt;</span> m (<span class="dt">Maybe</span> <span class="dt">Client</span>)</code></pre></div>
+<p>The implementations can then be written in any way, as long as they end up satisfying the required type. They can use partial application, for example, to pass other dependencies such as connection pools.</p>
+<h1 id="the-server">The Server</h1>
+<p>The <code>brochServer</code> function used above is in the <a href="https://github.com/tekul/broch/blob/master/Broch/Server.hs"><code>Broch.Server</code></a> module, which also contains most of the web handler code. This is where everything is plugged together to create the server and is thus the most useful source for understanding how the implementation works. It also contains the default functions for authentication and the user interface, which we used above.</p>
+<p>Most of the work for processing authorization and token requests is decoupled from the HTTP interface (WAI) and the code is in separate modules. The web handlers extract the request data, bundle the parameters up in a map, then delegate the detailed work to other functions. This makes it easier to test the core functionality and to use it with a different web front-end.</p>
+<h2 id="authorization-endpoint">Authorization Endpoint</h2>
+<p>The result of an authorization request can be one of</p>
+<ul>
+<li>A redirect containing the authorization information (an authorization code, access token or whatever other data is required by the grant request)</li>
+<li>A redirect to enable user authentication, before continuing processing the original authorization request</li>
+<li>An error returned to the user agent, due to a potentially malicious client request</li>
+<li>A redirect error, where the error information is returned to the client in the URL.</li>
+</ul>
+<p>The authorization web handler authenticates the user and then delegates to the function <a href="https://github.com/tekul/broch/blob/master/Broch/OAuth2/Authorize.hs"><code>processAuthorizationRequest</code></a>.</p>
+<h2 id="token-endpoint">Token Endpoint</h2>
+<p>The token endpoint authenticates the client and then calls the function <a href="https://github.com/tekul/broch/blob/master/Broch/OAuth2/Token.hs"><code>processTokenRequest</code></a>, return a JSON response as defined in the specification. This can be either a token response or an error response.</p>
+<h2 id="dynamic-registration">Dynamic Registration</h2>
+<p>The server can optionally support <a href="http://openid.net/specs/openid-connect-registration-1_0.html">client registration</a>.</p>
+<h2 id="discovery">Discovery</h2>
+<p>The discovery endpoint just provides a well-known location for clients to obtain a copy of the server’s configuration and supported features, such as the algorithms which can be used for encoding JWTs and the URLs of the other endpoints. The information is published at the standard URL path <code>/.well-known/openid-configuration</code>.</p>
+<h2 id="userinfo">UserInfo</h2>
+<p>A client can optionally retrieve user details from the “user info” endpoint by submitting the access token which was issued by the authorization server. This isn’t strictly necessary, as OpenID Connect also isssues an ID token which asserts the identity of the authenticated user and this may contain enough information, depending on the client’s requirements.</p>
+<h2 id="front-end">Front End</h2>
+<p>The UI requirements are minimal and will usually consist of</p>
+<ul>
+<li>A login page of some kind, unless the authorization server uses some authentication mechanism which doesn’t require one.</li>
+<li>A page to obtain the user’s approval for the information requested by the client.</li>
+</ul>
+<p>Default implementations are provided for both of these. The login page is used with the <code>passwordLoginHandler</code> and is a plain Blaze <code>Html</code> page. User approval is a function which takes the approval data and returns an <code>Html</code> page. The command-line server will also serve up static content from a configured directory, which can be used to provide CSS and image files for the UI.</p>
+<h2 id="client-authentication">Client Authentication</h2>
+<p>OAuth2 only mentions client authentication using a password/secret, either using a Basic authorization header or passing the credentials in the request body. Providers are also free to accept other forms of authentication.</p>
+<p>OpenID Connect explicitly defines the <a href="http://openid.net/specs/openid-connect-core-1_0.html#ClientAuthentication">client authentication methods</a> which it supports. All of these are available in this implementation.</p>
+<h2 id="key-rotation">Key Rotation</h2>
+<p>The server’s public keys can be obtained from the <code>jwks_uri</code> endpoint (which is returned in the server discovery data). It contains all the public keys which a client might need to validate server signatures and to encrypt data to send to the server.</p>
+<p>The rotation of <a href="http://openid.net/specs/openid-connect-core-1_0.html#RotateSigKeys">signing</a> and <a href="http://openid.net/specs/openid-connect-core-1_0.html#RotateEncKeys">encryption</a> keys is also covered in the spec. The <code>KeyRing</code> data type stores two active key pairs – one for signing and one for encryption. It also has a function to rotate the keys, expiring the previous active keys and generating news ones. Unless the keys need to be invalidated immediately (for security reasons, for example), the expired signing keys will still be available from the <code>jwks_uri</code> endpoint for a configurable grace period, so that tokens created with earlier signing keys will still validate. The server will also retain decryption private keys internally for the grace period.</p>
+<h1 id="developing-in-haskell">Developing in Haskell</h1>
+<p>The project has been a good learning experience and I’ve found Haskell to be particularly suitable for working to a complicated specification like OAuth2/OpenID Connect. The different errors and outcomes of a request can be modelled nicely using algebraic data types and using the <code>Either</code> type allows us to deal with all the error conditions defined by the spec while keeping IO errors (for example, data access errors) completely separate. As an example, the return type for <code>processAuthorizationRequest</code> is</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">m (<span class="dt">Either</span> <span class="dt">AuthorizationRequestError</span> <span class="dt">URI</span>)</code></pre></div>
+<p>The code runs in an arbitrary monad and thus does not contain any IO code. In practice <code>m</code> will be a <code>MonadIO</code> instance, since the functions for loading clients and so on will need to make calls to a database. Any IO errors should be returned as <code>500</code> responses but in the absence of these, we know from the type that the outcome of a call to the function will be either an <code>AuthorizationRequestError</code> or a URI which we should redirect to <a href="#fn8" class="footnoteRef" id="fnref8"><sup>8</sup></a>.</p>
+<p><code>AuthorizationRequestError</code> is a data type which captures the cases where the request will “short-circuit”:</p>
+<ul>
+<li>The client shows potentially malicious behaviour which should be reported to the end user.</li>
+<li>The client has submitted an otherwise invalid request, which should be reported to it via a redirect.</li>
+<li>The user needs to re-authenticate. This typically happens when the client requires that the previous login took place within a certain period.</li>
+</ul>
+<p>The actual data type is:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">AuthorizationRequestError</span>
+    <span class="fu">=</span> <span class="dt">MaliciousClient</span> <span class="dt">EvilClientError</span>
+    <span class="fu">|</span> <span class="dt">RequiresAuthentication</span>
+    <span class="fu">|</span> <span class="dt">ClientRedirectError</span> <span class="dt">URI</span></code></pre></div>
+<p>In deciding how to respond to the request, the handler code needs to pattern-match on the types and we can’t, for example, redirect the user to a malicious client by accident. The compiler will also generally warn if we forget to match on one of the options, which forces us to deal with all the cases. In future, the <a href="http://openid.net/specs/oauth-v2-form-post-response-mode-1_0.html">OAuth2 Form Post</a> spec will also be implemented, which would again modify the return type, probably changing the successful outcome from a simple redirect to either a redirect or a form post. The compiler would immediately point this out to calling code, making it difficult to call the function without also dealing with this case.</p>
+<p>This was a recurring theme – data types written to match the specification would in turn drive the development and ensure that all the corner cases had been dealt with.</p>
+<h1 id="future-work">Future Work</h1>
+<p>Broch implements most of the features for an OpenID Connect Provider required by the certification programme <a href="#fn9" class="footnoteRef" id="fnref9"><sup>9</sup></a>. Work on additional features is ongoing. The current aim is to develop an opinionated but customizable solution for authentication based on OpenID Connect, rather than an identity management solution which does <em>everything</em>. Even so, a production-ready solution requires a lot more than simple spec conformance. Suggestions for future development and also improvements to the current code are welcome.</p>
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p>This follows from the contrived acronym “Basic Realization of OpenID Connect in Haskell”, but I chose the name first and the acronym later. If someone can think of a better one, please let me know. Brochs are tall, round iron age buildings and I enjoyed playing in the ruins of some of them when I was young. They are of simple design, solidly engineered and secure. All good goals for an identity management system to aspire to, even an implementation of OAuth2/OpenID Connect.<a href="#fnref1">↩</a></p></li>
+<li id="fn2"><p>JWTs are implemented in a separate project <a href="http://hackage.haskell.org/package/jose-jwt"><code>jose-jwt</code></a>.<a href="#fnref2">↩</a></p></li>
+<li id="fn3"><p>Key rotation is described in the <a href="http://openid.net/specs/openid-connect-core-1_0.html#RotateSigKeys"><code>openid-connect-core</code></a> spec.<a href="#fnref3">↩</a></p></li>
+<li id="fn4"><p>OpenID Connect defines a specific set of <a href="http://openid.net/specs/openid-connect-core-1_0.html#Claims">claims</a>, which unfortunately aren’t directly compatible with SCIM.<a href="#fnref4">↩</a></p></li>
+<li id="fn5"><p>The aim is to build a full implementation of <a href="http://www.simplecloud.info/">the SCIM 2 spec</a>, but this is a work in progress, and SCIM may be overkill for many use cases.<a href="#fnref5">↩</a></p></li>
+<li id="fn6"><p>See the <a href="http://openid.net/specs/openid-connect-core-1_0.html#CodeFlowSteps">spec</a> for a more in-depth description. The only thing that will usually vary in this request is the <code>state</code> parameter which is generated by the client.<a href="#fnref6">↩</a></p></li>
+<li id="fn7"><p>Functional programmers enjoy making fun of other languages and their inadequacies in this department (just mention “dependency injection” and watch the reaction), but concrete examples of how to build a Haskell server with a pluggable configuration are thin on the ground. For a beginner it’s not clear where to start. If you’re using a framework like Yesod, then it uses typeclasses to implement different functionality you might want in your application, and you can override specific functions if you wish. However, I’d already decided I didn’t want to tie the project to any specific framework and I wasn’t overly keen on using typeclasses for everything. The approach I settled on was inspired by this <a href="http://stackoverflow.com/a/14329487/241990">Stack Overflow answer</a>.<a href="#fnref7">↩</a></p></li>
+<li id="fn8"><p>The spec actually says that 500 errors should be returned as a redirect to the client, but that can be handled by a single catch in the handler code.<a href="#fnref8">↩</a></p></li>
+<li id="fn9"><p>A deployed server has been tested successfully against the certification suite. Some optional features aren’t implemented yet. More information on certification can be found on the <a href="http://openid.net/certification/">OpenID site</a>.<a href="#fnref9">↩</a></p></li>
+</ol>
+</div>
+
+            </main>
+            <footer class="pb4 i gray tr">
+                Site generated by
+                <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+            </footer>
+        </div>
+    </body>
+</html>

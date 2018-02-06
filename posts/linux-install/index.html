@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html class="h-100" lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>broch.io - Linux Setup with XMonad</title>
+        <link rel="stylesheet" href="https://unpkg.com/tachyons@4.9.1/css/tachyons.min.css" />
+        <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.6/css/all.css" />
+        <link rel="stylesheet" type="text/css" href="../../css/default.css" />
+        <link rel="stylesheet" type="text/css" href="../../css/syntax.css" />
+        <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-66865607-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+    </head>
+    <body class="h-100 sans-serif">
+        <nav class="w-100 tc fixed bg-white top-0 z-3 shadow-4">
+            <input id="burger" type="checkbox" class="absolute top-2 right-1 dn">
+            <label for="burger" class="dn-l pointer absolute top-1 right-1">
+                <i class="fas fa-bars dib near-black f2"></i>
+            </label>
+            <ul id="main-menu" class="overflow-hidden menu db-l w-100 list tc pl0 pt2 pt3-l mv0 f4 fw3">
+                <li class="absolute static-l top-3 pl3 pl0-l pr5 pt2 mh2 f4 f3-ns di-l">
+                    <a href="../../" class="link black fw4">
+                        <img class="h2-plus v-mid" alt="broch logo" src="../../images/broch.svg" />
+                        <span class="b">broch.io</span>
+                    </a>
+                </li>
+                <li class="ph4 pl5-l pr4-l di-l pt5 pb2 tl pv0-l"><a href="../../" class="link black dim">Home</a></li>
+                <!-- >li class="ph4 di-l pv2 tl pv0-l"><a href="/about.html" class="link black dim">About</a></li -->
+                <li class="ph4 di-l pv2 tl pv0-l"><a href="../../contact.html" class="link black dim">Contact</a></li>
+                <li class="ph4 di-l pv2 tl pv0-l"><a href="../../archive.html" class="link black dim">Archive</a></li>
+            </ul>
+        </nav>
+        <div class="h-100 pt5 mw7 center flex flex-column justify-between">
+            <main class="pa3">
+                <h1>Linux Setup with XMonad</h1>
+
+                <div class="gray i f5">
+Posted on November 19, 2016
+ by Luke 
+
+</div>
+
+<p>Earlier this year, after many years of using OSX, I decided to switch to using Linux for my desktop. Most of the development tools I use work better on Linux – I mostly work directly with plain-text format files and I use the terminal a lot. I also wanted to use a tiling window manager with a minimal user interface. The changes Apple have been making to their machines and OS over the past few years have been irrelevant to my needs at best, and in some cases are downright annoying. The recent release of laptops with no escape key and yet more connectors (dongle hell) is just confirmation that I made the right choice. I bought a Thinkpad P50 as my work machine <a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a>.</p>
+<p>I’d maintained small Linux server installations for many years, and am happy enough setting up postfix or nginx, but I’d never really used Linux as a desktop environment. I wanted to use a lightweight XMonad setup rather than a stock distro desktop installation, which meant having to find out about a lot of things that would otherwise be taken care of automatically, but the result is that I have a simpler system and also a better understanding of how it actually works.</p>
+<div class="figure">
+<img src="xmonad-desktop.jpg" alt="XMonad up and running" />
+<p class="caption">XMonad up and running</p>
+</div>
+<p>This article describes the installation process, things I discovered along the way, and how I got to where I wanted to be (or near enough).</p>
+<h2 id="install-ubuntu-16.04-server">Install Ubuntu 16.04 Server</h2>
+<p>I used an Ubuntu server installation as a starting point. I wanted something reliable to build on which would be maintained long-term, but I didn’t want all the unnecessary noise of a full Gnome/Unity setup when I would be running XMonad as the window manager. I might experiment with other Linux distros in future when I’m more familiar with my current setup and have been running it for a while.</p>
+<h2 id="networking">Networking</h2>
+<p>The installation was done with an ethernet connection and if this is missing on a subsequent boot, the system will hang waiting for the connection to come up <a href="#fn2" class="footnoteRef" id="fnref2"><sup>2</sup></a>. By default, the static network configuration is read from the file <code>/etc/network/interfaces</code>, but for a laptop, this isn’t ideal, as the available networks may change and you probably want to be able to connect to different WIFI networks depending on where you are. The <code>network-manager</code> package is a common solution. First comment out everything but the <code>lo</code> interface in the <code>/etc/network/interfaces</code> file:</p>
+<pre><code># The loopback network interface
+auto lo
+iface lo inet loopback
+
+# Commented out because we are using network-manager
+
+# The primary network interface
+# auto enp0s31f6
+# iface enp0s31f6 inet dhcp</code></pre>
+<p>then install the package without the UI parts:</p>
+<pre><code>sudo apt install --no-install-recommends network-manager</code></pre>
+<p>In a normal desktop setup, you would just select an available WIFI network from a menu of available connections. The <code>nmcli</code> command-line tool provides equivalent commands for everything you need to manage connections. NetworkManager will connect automatically to networks in its database when you boot up, so you should only need to interact with it when you are connecting from a new location.</p>
+<p>To create a DHCP configured ethernet connection</p>
+<pre><code>nmcli connection add conn-name WiredHome type ethernet autoconnect yes</code></pre>
+<p>To list available WIFI connections (‘list’ is optional)</p>
+<pre><code>nmcli device wifi list</code></pre>
+<p>To create a new WIFI connection (creates a new connection each time)</p>
+<pre><code>nmcli device wifi connect &quot;My Favourite Cafe SSID&quot; password thepassword name &quot;Cafe&quot;</code></pre>
+<p>To switch WIFI off</p>
+<pre><code>nmcli radio wifi off</code></pre>
+<p>To list all known connections</p>
+<pre><code>nmcli connection show</code></pre>
+<p>To delete connections</p>
+<pre><code>nmcli connection delete name_or_id</code></pre>
+<p>You can also edit or delete existing connections. Connections are stored as files in the <code>/etc/NetworkManager/system-connections</code> directory. Note that the passwords are stored in plain text in these files. I don’t mind this since none of the WIFI connections I use are very secret <a href="#fn3" class="footnoteRef" id="fnref3"><sup>3</sup></a>.</p>
+<h2 id="managing-external-disks">Managing External Disks</h2>
+<p>The <code>udisks2</code> package seems to be the back-end which most filesystem management tools (e.g. Nautilus) use to deal with hotplugging of USB disks, so I installed this. It comes with a command line program <code>udisksctl</code>.</p>
+<p>To list devices</p>
+<pre><code>$ udisksctl status
+MODEL             REVISION    SERIAL          DEVICE
+-------------------------------------------------
+Databar           5.00        07ABC           sda
+</code></pre>
+<p>To find out more about a device</p>
+<pre><code>udisksctl info -b /dev/sda</code></pre>
+<p>To mount a filesystem</p>
+<pre><code>udisksctl mount -b /dev/sda1</code></pre>
+<p>To unmount it</p>
+<pre><code>udisksctl unmount -b /dev/sda1</code></pre>
+<p>To power off the disks</p>
+<pre><code>udisksctl power-off -b /dev/sda</code></pre>
+<p>Disks are mounted under <code>/media/&lt;username&gt;/</code>.</p>
+<h2 id="key-ring---storing-passwords-securely">Key Ring - Storing Passwords Securely</h2>
+<p>We don’t want lots of email passwords and other secrets lying about in configuration files. A keyring program stores passwords (or other sensitive data) in an encrypted database, encrypted with a master password. The most common seems to be <code>gnome-keyring</code> which uses the derives a key from the login password to encrypt the data. Fortunately it can be used without pulling in anything else Gnome-related:</p>
+<pre><code>sudo apt install --no-install-recommends gnome-keyring libpam-gnome-keyring</code></pre>
+<p>Also install <code>libsecret-tools</code> which allows access to the keyring using the <code>secret-tool</code> command.</p>
+<pre><code>sudo apt install libsecret-tools</code></pre>
+<p>The installation adds an entry to <code>/etc/pam.d/common-password</code>, but you need to do some additional configuration if you want to start the keyring daemon when you log in on the console <a href="#fn4" class="footnoteRef" id="fnref4"><sup>4</sup></a>. I removed the entry and edited the <code>/etc/pam.d/login</code> and <code>/etc/pam.d/passwd</code> files as described in the <a href="https://wiki.archlinux.org/index.php/GNOME/Keyring#PAM_method">Arch Linux Wiki</a> <a href="#fn5" class="footnoteRef" id="fnref5"><sup>5</sup></a>.</p>
+<h2 id="email">Email</h2>
+<p>My email setup is heavily influenced by <a href="https://github.com/pbrisbin/dotfiles">Pat Brisbin’s</a> <a href="#fn6" class="footnoteRef" id="fnref6"><sup>6</sup></a>. It uses</p>
+<ul>
+<li>mbsync for syncing gmail over IMAP</li>
+<li>msmtp for sending emails</li>
+<li>mutt for reading mails</li>
+</ul>
+<p>Passwords for accounts can be added to the keyring using secret tool:</p>
+<pre><code>secret-tool store --label=&quot;Gmail password for myaccount&quot; gmail myaccount</code></pre>
+<p>And looked up in <code>.mbsyncrc</code>:</p>
+<pre><code>PassCmd &quot;secret-tool lookup gmail myaccount&quot;</code></pre>
+<p>and in <code>.msmtprc</code> <a href="#fn7" class="footnoteRef" id="fnref7"><sup>7</sup></a>:</p>
+<pre><code>passwordeval secret-tool lookup gmail myaccount | awk 1</code></pre>
+<h3 id="mail-address-lookup">Mail Address Lookup</h3>
+<p>When sending emails, programs will usually be able to lookup addresses either in a system address book or their own custom lists. With mutt, you need to decide how you want to maintain your contacts and tell it how to look them up. You can use a simple alias list, or <a href="https://wiki.archlinux.org/index.php/Mutt#Contact_management">set up an external query command</a>. I’m using <code>abook</code>, which is a step up up from simple aliases but still very basic. You can use it to query addresses and to add them directly from within mutt. I have the following added to my <code>.muttrc</code> file</p>
+<pre><code>set query_command=&quot;abook --mutt-query '%s'&quot;
+
+macro index,pager a &quot;| abook --add-email\n&quot;</code></pre>
+<p>The macro bound to ‘a’ overrides the default <code>create-alias</code> command. You can bind it to something else if you want.</p>
+<h2 id="xwindows-and-xmonad">XWindows and XMonad</h2>
+<p>One of the reasons for switching systems was to be able to use <a href="http://xmonad.org">XMonad</a>. A tiling window manager just fits much better with a workflow which mostly involves using an editor and terminals. Indeed, it’s hard to see the benefit of having to adjust window positions and sizes manually in any kind of workflow.</p>
+<p>The required packages:</p>
+<pre><code>sudo apt install xmonad dmenu xmobar xinit rxvt-unicode-256 x11-xserver-utils</code></pre>
+<p>Initial login still takes place on the console, which I prefer, but XMonad will be started when you run the <code>startx</code> command. You can customize the startup process by <a href="https://github.com/tekul/dotfiles/blob/master/xinitrc">writing your own <code>.xinitrc</code> file</a> <a href="#fn8" class="footnoteRef" id="fnref8"><sup>8</sup></a>.</p>
+<p>I also installed the font packages <code>fonts-inconsolata</code> for use in the console and <code>fonts-wqy-zenhei</code> for Chinese support.</p>
+<p>I didn’t need to do much to <a href="https://github.com/tekul/dotfiles/blob/master/xmonad/xmonad.hs">customize XMonad</a>. I added some key mappings to make the volume control keys work, some shortcut keys, and set <code>urxvt</code> to be the terminal, but other than that it’s a very standard setup <a href="#fn9" class="footnoteRef" id="fnref9"><sup>9</sup></a>. <code>XMobar</code> provides a simple menu bar (which I can easily hide whenever I want) and <code>dmenu</code> makes it easy to run an application by typing its name (it is bound to the <code>Mod-p</code> key by default and provides text completion in the menu bar area).</p>
+<h3 id="touchpad-sensitivity">Touchpad Sensitivity</h3>
+<p>The sensitivity of the touchpad can cause problems because you can accidentally brush against it and change focus while you are tying, either to a different point in the same file or to another window altogether. Needless to say this is very annoying. There are tools such as <code>syndaemon</code> which disables the touchpad while you are typing and there are also settings to adjust the sensitivity, but I still found this to be an issue so I just disabled the touchpad by adding</p>
+<pre><code>synclient TouchPadOff=1</code></pre>
+<p>to my <code>.xinitrc</code> file. I also have a key mapping defined to toggle it on and off if I really want to use it.</p>
+<h2 id="sound">Sound</h2>
+<p>I’m still learning how the sound system works on Linux, but I installed the following packages</p>
+<ul>
+<li><code>alsa-utils</code> command line utils for setting the volume and so on. Useful for binding to keys in <code>xmonad.hs</code></li>
+<li><code>sox</code> to be able to play and record from the command line (this duplicates some functionality in <code>alsa-utils</code> so may not be needed)</li>
+</ul>
+<h2 id="music">Music</h2>
+<p>I’ve always detested iTunes. It’s always been a dreadful music player and the only thing I missed when I switched from Windows to OSX was the Winamp music player. For years iTunes didn’t even have a simple “add to queue” feature and it only plays Apple approved file formats. These days its priorities are acting as a front end to the app store and as a file manager for your iPhone (which I don’t have).</p>
+<p>Unsurprisingly there are plenty of music players on Linux. My favourite was <a href="https://cmus.github.io/"><code>cmus</code></a> which is a really nice terminal application with a very simple interface. The only customization I made was to set the colour scheme to “zenburn”. It’s also available on OSX via homebrew, so iTunes is history. Good riddance.</p>
+<h2 id="image-handling">Image Handling</h2>
+<h3 id="viewing-and-editing">Viewing and Editing</h3>
+<p><a href="https://feh.finalrewind.org/">feh</a> is a command line tool which displays images in a simple window. It’s handy if you’re working in the terminal and generating images or graphs which you want to view immediately.</p>
+<p><a href="https://www.gimp.org/">Gimp</a> is an obvious choice if you want to edit images. It as an optional dependency on the package <code>tcpd</code> which seems unnecessary. I also installed the <code>imagemagick</code> package which has lots of useful command line tools.</p>
+<pre><code>sudo apt install --no-install-recommends gimp
+sudo apt install imagemagick</code></pre>
+<p>Gimp 2.8 comes with a single-window mode which works much better with XMonad tiling. This isn’t the default, so you need to select it from the <code>Windows</code> menu or the tool windows will look weird.</p>
+<h3 id="managing-photo-collections">Managing Photo Collections</h3>
+<p>Loading and viewing photos is another requirement. My current choice is <code>gThumb</code> which seems to do everything I need and has fewer dependencies than the other major competitors I looked at.</p>
+<pre><code>sudo apt install --no-install-recommends gthumb</code></pre>
+<p>I haven’t been able to get it to download images from my phone yet, but I can do so using the command line tool <code>gphoto2</code>. For example, to download all files from a specific folder I use:</p>
+<pre><code>gphoto2 -f /store_00010001/DCIM/Camera -P</code></pre>
+<h2 id="irc-and-instant-messaging">IRC and Instant Messaging</h2>
+<p>A lot of messaging these days takes place on phones and I’m fine with moving that way too, but there’s a limit to how much I want to type on a phone. I still spend a lot of time in front of a computer and chat apps are pretty much essential if you collaborate with others remotely. I use Google chat with quite a few people so I needed a replacement for it. <a href="http://www.profanity.im">Profanity</a> is an XMPP client which seems to work well. It’s another simple terminal application, based on the IRC client <a href="https://irssi.org">IRSSI</a>. IRSSI was also easy to get running with my existing freenode account.</p>
+<p>I do still have a lot of contacts in Skype but I don’t use it as often as I used to and I haven’t checked out the Linux version yet.</p>
+<h2 id="chinese-input-on-linux">Chinese Input on Linux</h2>
+<p>I’ve been learning (and re-learning) Chinese for a long time and the pinyin input method on OSX is very handy for people like me who can pronounce and recognise some characters, but not necessarily write them from memory.</p>
+<p>The <a href="http://fcitx-im.org/"><code>fcitx</code></a> package seems to be pretty much the standard and I found it easy enough to install and get working.</p>
+<pre><code>sudo apt install fcitx fcitx-pinyin</code></pre>
+<p>You can add other input methods as desired, for example:</p>
+<pre><code>sudo apt install fcitx-table-wubi fcitx-sunpinyin fcitx-googlepinyin</code></pre>
+<p>and choose which ones are enabled using <code>fcitx-configtool</code> or by editing the file <code>~/.config/fcitx/profile</code>.</p>
+<p>This was enough to get pinyin input working in all applications I tried (and the terminal) apart from Emacs, for which there is a <a href="https://wiki.archlinux.org/index.php/Fcitx#Emacs">specific workaround</a>.</p>
+<h3 id="adding-chinese-locale">Adding Chinese Locale</h3>
+<p>Running <code>locale -a</code> showed that only English locales were available. To add simplified Chinese run:</p>
+<pre><code>sudo locale-gen zh_CN.UTF-8</code></pre>
+<p>You can do this for any of the locales listed in <code>/usr/share/i18n/SUPPORTED</code>.</p>
+<p>I have a shortcut in my <code>xmonad.hs</code> for running emacs. I changed this to set the variable beforehand:</p>
+<pre><code>((mod4Mask, xK_s), spawn &quot;LC_CTYPE='zh_CN.UTF8' emacs24-x&quot;)</code></pre>
+<p>and <code>fcitx</code> then works in Emacs too (你看得见吗？). Emacs also has its own Chinese input method support but fcitx seems good enough for me.</p>
+<h2 id="further-resources">Further Resources</h2>
+<p>Most of the above was of course pilfered from other sources. Many of the programs I’ve mentioned have excellent websites and documentation and I found the <a href="https://wiki.archlinux.org/">Arch Linux Wiki</a> really useful. Lots of people have also uploaded their configuration files to <a href="https://github.com/">github</a> and you can easily find relevant material there using github’s source search. This is great both for tuning your own files and for finding out about other useful things that people are using <a href="#fn10" class="footnoteRef" id="fnref10"><sup>10</sup></a>.</p>
+<h2 id="conclusions">Conclusions</h2>
+<p>So far, I’m pretty happy with my setup. There have been benefits I expected and also some things I like which I hadn’t anticipated. I have a simple system with the bare minimum of installed packages to do what I want – there’s none of the extra garbage that vendors feel the need to clutter their latest offerings with to attract attention. I had to learn various new commands to allow me to do things which would normally be done through a UI, but in the long term this is often more efficient. It’s certainly no worse than having to remember the different “control panel” locations and sequences of menu items which a UI layers on top. Using the command line directly strips away this extra obfuscation and the knowledge is more portable than familiarity with different window-based utilities.</p>
+<p>Working with XMonad is much nicer, particularly for programming, where a tiling window manager comes into its own. It’s easy to fire up a terminal next to or below your current window without losing focus of what you were looking at before, whether it’s a browser page or something in your editor. Working with multiple desktops and shunting windows between them quickly becomes a normal part of your workflow and there’s no clutter taking up screen space unnecessarily. It’s all super fast, without distractions such as animations, notification bars and so on. Since I haven’t configured <code>mbsync</code> to pull down mail automatically, I also find that I now prefer to only read email when I choose, so there are no push notifications in the system at all and thus no interruptions when I’m working on something.</p>
+<p>I can’t really come up with anything I need that is seriously missing on Linux. Some things, like hotplugging cameras and downloading images is slicker on OSX, but that’s more an issue with my minimal setup than Linux in general – a standard distro installation would probably be better at this kind of thing. OSX has nicer fonts (Chinese sometimes mixes fonts and looks a bit rough in my terminal) but I’m still hoping to make improvements on that front.</p>
+<p>I hope someone finds something useful here. If anyone has any suggestions for things I might be missing, please let me know.</p>
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p>There’s nothing specific to the P50 in this article. It’s quite a chunky, powerful machine. It has an Nvidia graphics card as well as the on-board Intel card and this is one area where Linux is a bit of a headache. Support for dual-graphics card laptops on Linux isn’t great. The laptop screen runs fine using the Intel card, but there are some display issues if I use an external monitor with it. If I switch to the NVidia card exclusively it works fine but this requires a reboot and a BIOS switch. I haven’t tried using NVidia’s drivers or optimising the setup for switching between the cards yet. There are tools for this but it seems like a bit of a minefield and I’m happy enough with it for now. This will improve in future versions, but if you don’t need high-performance graphics then you might be better picking a machine with a single card.<a href="#fnref1">↩</a></p></li>
+<li id="fn2"><p>There is a timeout configured somewhere which I changed the first time I ran into the problem, but I can’t find the file anymore. In any case it doesn’t matter once the ethernet settings have been removed from <code>/etc/network/interfaces</code>.<a href="#fnref2">↩</a></p></li>
+<li id="fn3"><p>NetworkManager can be integrated with gnome keyring, using a <a href="https://developer.gnome.org/NetworkManager/stable/gdbus-org.freedesktop.NetworkManager.SecretAgent.html"><code>SecretAgent</code></a> service. Removing the <code>psk</code> and setting <code>psk-flags=1</code> in the connection file means a user secret agent will be asked for the password (see <code>man nm-settings</code>). The <code>nm-applet</code> application from the package <code>network-manager-gnome</code> implements the required service interface. It will ask the user for the password on demand and store it for late use in the keyring. If you don’t install this, a workaround is to remove the <code>psk</code> entry from the connection file and get <code>nmcli</code> to ask you to enter the password: <code>nmcli --ask connection up Cafe</code>. I also had a go at <a href="https://github.com/tekul/nm-agent">writing my own SecretAgent</a> to try out the Haskell <code>dbus</code> and <code>gnome-keyring</code> libraries.<a href="#fnref3">↩</a></p></li>
+<li id="fn4"><p>There is a tool called <code>pam-auth-update</code> which adds (or removes) the gnome keyring entry automatically. I guess it only adds the password entry since I’m using the console rather than a standard gnome setup.<a href="#fnref4">↩</a></p></li>
+<li id="fn5"><p>Setting the PAM stuff up seems quite temperamental and I had some problems. For example, the keyring daemon would be started but the keyring wouldn’t be unlocked on login and I would still be prompted for my password when it was needed. So far, I can also only get <code>secret-tool</code> to work from within X-Windows.<a href="#fnref5">↩</a></p></li>
+<li id="fn6"><p>Note that the mutt/email articles in his blog are out of date compared to the current setup.<a href="#fnref6">↩</a></p></li>
+<li id="fn7"><p><code>msmtp</code> is supposed to integrate directly with the keyring but I couldn’t get it to work. In any case it makes more sense to share the same keyring entry between the two. The <code>passwordeval</code> option enables this. It fails without the <code>awk 1</code>, probably because it doesn’t write out the required newline.<a href="#fnref7">↩</a></p></li>
+<li id="fn8"><p>The default setup sources the files in <code>/etc/X11/Xsession.d</code> and ends up by running the script <code>/usr/bin/x-session-manager</code> which starts xmonad. For more information on the startup sequence, see the <code>startx</code> man page.<a href="#fnref8">↩</a></p></li>
+<li id="fn9"><p>Details of fonts and other customizations for urxvt can be found in the <a href="https://github.com/tekul/dotfiles/blob/master/Xdefaults">.Xdefaults file</a>.<a href="#fnref9">↩</a></p></li>
+<li id="fn10"><p>This is how I found out about <code>cmus</code>, for example. I think it was <a href="https://github.com/ssh0/dotfiles">in this repo</a> which also has quite a sophisticated Xmonad setup.<a href="#fnref10">↩</a></p></li>
+</ol>
+</div>
+
+            </main>
+            <footer class="pb4 i gray tr">
+                Site generated by
+                <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+            </footer>
+        </div>
+    </body>
+</html>
