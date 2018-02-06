@@ -1,11 +1,11 @@
 pre {
   color: #f2f2f2;
   font-family: consolas,monaco,monospace;
-  font-size: 14px;
-  line-height: 16px;
+  font-size: 1em;
+  line-height: 1.25;
   background-color: #393939;
   border-radius: 4px;
-  padding: 10px;
+  padding:  .5rem;
   overflow: auto;
 }
 
@@ -26,7 +26,7 @@ td.sourceCode { padding-left: 5px; }
 
 /* keywords and data types */
 .sourceCode span.kw { color: #f0dfaf; }
-.sourceCode span.dt { color: #dfdfbf; }
+.sourceCode span.dt { color: #dfdfbf; display: inline;}
 /* numeric */
 .sourceCode span.dv { color: #8cd0d3; }
 .sourceCode span.bn { color: #8cd0d3; }
@@ -47,4 +47,3 @@ td.sourceCode { padding-left: 5px; }
 .sourceCode span.al { color: #80d4aa; font-weight: bold; }
 /* error */
 .sourceCode span.er { color: #80d4aa; font-weight: bold; }
-

@@ -1,12 +1,21 @@
-body {
-    color: black;
-    font-family: Helvetica, Arial, sans-serif;
-    font-size: 16px;
-    font-weight: 300;
-    line-height: 20px;
-    margin: 0px auto 0px auto;
+/*Navbar*/
+
+.menu {
+    min-height: 4rem;
+    max-height: 0;
+    transition: max-height 0.4s;
 }
 
+#burger:checked ~ .menu {
+    max-height: 25rem;
+}
+
+/* Height for logo */
+.h2-plus {
+    height: 2.5rem;
+}
+
+/* Standard link styles */
 a {
     color: #96281b;
     text-decoration: none;
@@ -16,79 +25,8 @@ a:hover {
     text-decoration: underline;
 }
 
-div#header {
-    border-bottom: 1px solid #e8e8e8;
-    margin-bottom: 30px;
-    padding: 12px 0px 12px 0px;
-}
-
-.wrapper {
-    margin: 0 auto;
-    max-width: 800px;
-}
-
-div#content {
-    margin: 0 auto;
-    max-width: 800px;
-}
-
-.figure img {
-    max-width: 100%;
-}
-
-.figure .caption {
-    text-align: center;
-    font-style: italic;
-}
-
-div#logo {
-    color: black;
-    float: left;
-    font-size: 18px;
-    font-weight: bold;
-}
-
-div#logo span {
-  padding-left: 5px;
-}
-
-div#header #navigation {
-    text-align: right;
-}
-
-div#header #navigation a {
-    color: #727272;
-    font-size: 18px;
-    margin-left: 12px;
-}
-
-a:hover {
-    text-decoration: underline;
-}
-
-div#footer {
-    border-top: solid 1px #e8e8e8;
-    color: #555;
-    font-size: 12px;
-    margin-top: 30px;
-    padding: 12px 0px 12px 0px;
-    text-align: right;
-}
-
-h1 {
-    font-size: 24px;
-}
-
-h2 {
-    font-size: 20px;
-}
-
-div.info {
-    color: #555;
-    font-size: 14px;
-    font-style: italic;
-}
-
-div.info .updated {
-  float: right;
+/* More readable article text */
+main p {
+    line-height: 1.25;
+    font-size: 1.25rem;
 }
