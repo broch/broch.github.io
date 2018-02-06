@@ -6,7 +6,7 @@ tags: elm,physics
 updated: 2017-02-16
 ---
 
-I've been meaning to try [Elm](htts://elm-lang.org) for some time and finally made the effort to actually write something. It's a demo of the [double-slits experiment](https://en.wikipedia.org/wiki/Double-slit_experiment). I already had some Java code which I wrote ages ago, but I've never got round to converting it to Javascript [^swatt]. Elm seems like a nice alternative so I decided to give it a try.
+I've been meaning to try [Elm](http://elm-lang.org) for some time and finally made the effort to actually write something. It's a demo of the [double-slits experiment](https://en.wikipedia.org/wiki/Double-slit_experiment). I already had some Java code which I wrote ages ago, but I've never got round to converting it to Javascript [^swatt]. Elm seems like a nice alternative so I decided to give it a try.
 
 [^swatt]: When I was a student, my supervisor Sandy Watt wrote physics demo programs including one like this, and my Java code was based on his original version. His programs were written in Basic with embedded ARM code, but these days we can get away with a high-level language like Elm and rendering images with SVG without having to worry about performance.
 
