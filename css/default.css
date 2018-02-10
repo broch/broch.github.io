@@ -42,7 +42,7 @@ main a:focus, main a:hover {
 }
 
 /* More readable article text */
-main p {
+main p, main ul {
     line-height: 1.25;
     font-size: 1.25rem;
 }
