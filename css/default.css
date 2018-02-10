@@ -1,5 +1,13 @@
-/*Navbar*/
+/* Standard colour for links and burger menu */
+:root {
+    --blood-red: #ae131c;
+}
 
+.blood-red {
+    color: var(--blood-red);
+}
+
+/*Navbar*/
 .menu {
     min-height: 4rem;
     max-height: 0;
@@ -10,19 +18,27 @@
     max-height: 25rem;
 }
 
+.burger-bar {
+    stroke: var(--blood-red);
+    stroke-width: 2;
+}
+
 /* Height for logo */
 .h2-plus {
     height: 2.5rem;
 }
 
 /* Standard link styles */
-a {
-    color: #96281b;
+main a, main a:visited {
+    color: var(--blood-red);
     text-decoration: none;
+    opacity: 1;
+    transition: opacity .15s ease-in;
 }
 
-a:hover {
-    text-decoration: underline;
+main a:focus, main a:hover {
+    opacity: .5;
+    transition: opacity .15s ease-in;
 }
 
 /* More readable article text */
