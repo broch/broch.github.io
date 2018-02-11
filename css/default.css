@@ -46,3 +46,14 @@ main p, main ul {
     line-height: 1.25;
     font-size: 1.25rem;
 }
+
+/* Internal link anchors: Use padding and negative top margins to compensate for fixed navbar */
+.footnoteRef {
+    outline: 0;
+    padding-top: 5rem;
+}
+
+.footnotes li {
+    margin-top: -6em;
+    padding-top: 5rem;
+}
