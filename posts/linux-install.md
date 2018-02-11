@@ -3,7 +3,9 @@ title: Linux Setup with XMonad
 author: Luke
 date: 2016-11-19
 tags: linux,xmonad
+updated: 2018-02-11
 ---
+
 
 Earlier this year, after many years of using OSX, I decided to switch to using Linux for my desktop. Most of the development tools I use work better on Linux -- I mostly work directly with plain-text format files and I use the terminal a lot. I also wanted to use a tiling window manager with a minimal user interface. The changes Apple have been making to their machines and OS over the past few years have been irrelevant to my needs at best, and in some cases are downright annoying. The recent release of laptops with no escape key and yet more connectors (dongle hell) is just confirmation that I made the right choice. I bought a Thinkpad P50 as my work machine [^p50].
 
@@ -16,6 +18,10 @@ I'd maintained small Linux server installations for many years, and am happy eno
 This article describes the installation process, things I discovered along the way, and how I got to where I wanted to be (or near enough).
 
 ## Install Ubuntu 16.04 Server
+
+_Update_: Not long after writing this article I switched to using Arch Linux as the base distribution, which I'd thoroughly recommend. This is my [current list of installed packages](arch-packages.txt) [^arch]. Also, I now build `xmonad` and `xmobar` as part of my local Haskell development environment rather than installing the distro versions, but aside from that, my setup is still very similar to the one described here.
+
+[^arch]: My initial motivation for the switch to Arch Linux was to have a system with a newer kernel and `xorg` packages (1.19+) which had better support for Nvidia hardware and dual graphics cards. Any concerns I might have had about stability didn't last long. I've had very few issues and the documentation is great.
 
 I used an Ubuntu server installation as a starting point. I wanted something reliable to build on which would be maintained long-term, but I didn't want all the unnecessary noise of a full Gnome/Unity setup when I would be running XMonad as the window manager. I might experiment with other Linux distros in future when I'm more familiar with my current setup and have been running it for a while.
 
