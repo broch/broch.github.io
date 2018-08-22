@@ -24,9 +24,10 @@ I've been meaning to try [Elm](http://elm-lang.org) for some time and finally ma
 </div>
 <script src="slits.js"></script>
 <script>
-    var node = document.getElementById('slits');
-    var flags = { width: 700, height: 500 }
-    var app = Elm.Main.embed(node, flags);
+    var app = Elm.Main.init({
+      node: document.getElementById('slits'),
+      flags: { width: 700, height: 500 }
+    });
     var nSlitsNode = document.getElementById('numSlits');
     nSlitsNode.options[1].selected = true;
     function changeSlits() {
