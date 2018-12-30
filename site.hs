@@ -39,9 +39,10 @@ main = do
             route   idRoute
             compile compressCssCompiler
 
-        match (fromList ["about.rst", "contact.md"]) $ do
-            route   $ setExtension "html"
-            compile $ pandocCompiler
+        match (fromList ["about.html", "contact.html"]) $ do
+            route idRoute
+            compile $ getResourceBody
+                >>= applyAsTemplate defaultContext
                 >>= loadAndApplyTemplate "templates/default.html" defaultContext
                 >>= relativizeUrls
                 >>= removeIndexHtml
