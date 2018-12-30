@@ -1,5 +1,7 @@
 .cabal-sandbox
 .stack-work
+dist-newstyle/
+.ghc.*
 .DS_Store
 cabal.sandbox.config
 dist/
