@@ -2,6 +2,7 @@
 title: Using CPRG Random Number Generators in a Web Application
 tags: haskell,crypto
 date: 2015-02-06
+thumb: placeholder.png
 author: Luke
 ---
 

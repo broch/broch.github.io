@@ -2,6 +2,8 @@
 title: OAuth2 and OpenID Connect in Haskell
 author: Luke
 date: 2016-05-02
+thumb: /posts/oauth2-openid-connect-haskell/openid-icon-250x250.png
+summary: Implementing an OpenID Connect provider in Haskell.
 tags: haskell,identity,oauth2,openid-connect
 ---
 
@@ -66,20 +68,20 @@ Some standard options for authentication and user management are provided -- you
 The configured server uses WAI and can be run using the warp web server:
 
 > {-# LANGUAGE OverloadedStrings #-}
->
+
 > import Data.Default.Generics (def)
 > import qualified Data.Text as T
 > import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 > import Network.Wai.Handler.Warp
 > import Web.Routing.TextRouting
->
+
 > import Broch.Model (Client(..), GrantType(..), Scope(..), UserInfo(..))
 > import Broch.Server.Config
 > import Broch.Server (brochServer, authenticatedSubject, authenticateSubject, defaultLoginPage, defaultApprovalPage, passwordLoginHandler)
 > import Broch.Server.Internal (routerToApp, text, invalidateSession)
 > import Broch.Server.Session (defaultKey, defaultLoadSession)
 > import Broch.URI (parseURI)
->
+
 > main :: IO ()
 > main = do
 >     sessionEncryptionKey <- defaultKey
@@ -107,7 +109,7 @@ The configured server uses WAI and can be run using the warp web server:
 >     authenticate username password
 >       | username == password = return (Just username)
 >       | otherwise            = return Nothing
->
+
 >     loadUserInfo uid _ = return . Just $ def
 >       { sub = uid
 >       , email = Just (T.concat [uid, "@someplace.com"])

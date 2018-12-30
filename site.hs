@@ -8,7 +8,8 @@ import           Data.Time.Format (parseTimeM, formatTime, TimeLocale, defaultTi
 import           Data.Time.Clock (UTCTime (..))
 import           Hakyll
 import           System.Environment
-import           System.FilePath.Posix  (takeBaseName, takeDirectory, (</>), splitFileName)
+import           System.FilePath.Posix (takeBaseName, takeDirectory, (</>), splitFileName)
+import           Text.Pandoc.Extensions (disableExtension)
 import           Text.Pandoc.Options (writerExtensions, Extension(Ext_literate_haskell))
 
 config :: Configuration
@@ -47,11 +48,13 @@ main = do
                 >>= relativizeUrls
                 >>= removeIndexHtml
 
+        tags <- buildTags "posts/*" $ fromCapture "tags/*.html"
+
         match postsPattern $ do
             route niceRoute
             compile $ pandocCompilerWith defaultHakyllReaderOptions outputOptionsSansLHS
-                >>= loadAndApplyTemplate "templates/post.html"    postCtx
-                >>= loadAndApplyTemplate "templates/default.html" postCtx
+                >>= loadAndApplyTemplate "templates/post.html"    (postCtxWithTags tags)
+                >>= loadAndApplyTemplate "templates/default.html" (postCtxWithTags tags)
                 >>= relativizeUrls
 
         match postsResources $ do
@@ -73,14 +76,28 @@ main = do
                     >>= relativizeUrls
                     >>= removeIndexHtml
 
+        tagsRules tags $ \tag pat -> do
+            let title = "Posts tagged \"" ++ tag ++ "\""
+            route idRoute
+            compile $ do
+                posts <- recentFirst =<< loadAll pat
+                let ctx =
+                        constField "title" title <>
+                        listField "posts" (postCtxWithTags tags) (return posts) <>
+                        defaultContext
+
+                makeItem ""
+                    >>= loadAndApplyTemplate "templates/tag.html" ctx
+                    >>= loadAndApplyTemplate "templates/default.html" ctx
+                    >>= relativizeUrls
+
 
         match "index.html" $ do
             route idRoute
             compile $ do
                 posts <- recentFirst =<< loadAll postsPattern
                 let indexCtx =
-                        listField "posts" postCtx (return posts) <>
-                        constField "title" "Home"                <>
+                        listField "posts" (postCtxWithTags tags) (return posts) <>
                         defaultContext
 
                 getResourceBody
@@ -93,6 +110,11 @@ main = do
 
 
 --------------------------------------------------------------------------------
+
+postCtxWithTags :: Tags -> Context String
+postCtxWithTags tags =
+    tagsField "tags" tags <> postCtx
+
 
 postCtx :: Context String
 postCtx =
@@ -128,7 +150,7 @@ getUpdatedTime locale id' = do
         ]
 
 outputOptionsSansLHS = defaultHakyllWriterOptions
-    { writerExtensions = S.delete Ext_literate_haskell (writerExtensions defaultHakyllWriterOptions)
+    { writerExtensions = disableExtension Ext_literate_haskell (writerExtensions defaultHakyllWriterOptions)
     }
 
 -- replace url of the form foo/bar/index.html by foo/bar

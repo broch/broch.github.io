@@ -3,6 +3,8 @@ title: Double-Slit Diffraction in Elm
 author: Luke
 date: 2017-01-02
 tags: elm,physics
+thumb: /posts/double-slits-elm/slits.png
+summary: A demo of the double-slits experiment (Young's slits) written in Elm.
 updated: 2017-02-16
 ---
 
@@ -10,7 +12,9 @@ I've been meaning to try [Elm](http://elm-lang.org) for some time and finally ma
 
 [^swatt]: When I was a student, my supervisor Sandy Watt wrote physics demo programs including one like this, and my Java code was based on his original version. His programs were written in Basic with embedded ARM code, but these days we can get away with a high-level language like Elm and rendering images with SVG without having to worry about performance.
 
-<div id="slits" style="width: 700px; margin: 0 auto;"></div>
+<div style="margin: 0 auto; width: 750px; height: 500px;">
+<div id="slits"></div>
+</div>
 <div id="controls">
 <label for="numSlits">Number of slits</label>
 <select id="numSlits" onchange="changeSlits()">
@@ -26,7 +30,7 @@ I've been meaning to try [Elm](http://elm-lang.org) for some time and finally ma
 <script>
     var app = Elm.Main.init({
       node: document.getElementById('slits'),
-      flags: { width: 700, height: 500 }
+      flags: { width: 750, height: 500 }
     });
     var nSlitsNode = document.getElementById('numSlits');
     nSlitsNode.options[1].selected = true;
