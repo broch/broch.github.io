@@ -1,0 +1,9 @@
+baseURL = "https://broch.io/"
+languageCode = "en-gb"
+title = "broch.io"
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+

@@ -1,0 +1,11 @@
+{{ define "main" }}
+<article>
+<h1 class="f4 f3-l">{{ .Title }}</h1>
+<div class="gray i f5">
+Posted on {{ .Date }}
+</div>
+
+{{ .Content }}
+
+</article>
+{{ end }}
