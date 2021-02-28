@@ -20,12 +20,10 @@ Zxcvbn is a password strength estimator which makes use of password frequency li
 
 From Elm, we want to be able to call a `checkPassword` function, passing the password as a string. This function is a "port", so the Elm runtime knows to call an external Javascript function as the implementation.
 
-```
+```elm
 port checkPassword : String -> Cmd msg
 
-
 port passwordChecked : (Json.Value -> msg) -> Sub msg
-
 ```
 Zxcvbn produces a JSON value containing a score for the password and information about how the score was calculated. The second port, `passwordChecked` allows us to subscribe to the Zxcvbn response. The responses will then be received as messages through the application `update` function.
 
@@ -34,21 +32,18 @@ Zxcvbn produces a JSON value containing a score for the password and information
 
 In Javascript we need to hook up our port implementations to Javascript code. The `checkPassword` function is just implemented as a call to the `zxcvbn` function, passing in the password. It then sends the response back through the `passwordChecked` port.
 
-```
-
+``` javascript
 app.ports.checkPassword.subscribe(function(password) {
     var report = zxcvbn(password);
     app.ports.passwordChecked.send(report);
 });
-
-
 ```
 
 ## Decoding JSON
 
 When we receive the Zxcvbn report as a JSON value, we decode it into a matching Elm data structure to make sure it contains what we expect and to make it easier to work with:
 
-```
+```elm
 type alias Zxcvbn =
     { password : String
     , guesses : Float
@@ -70,7 +65,7 @@ Writing decoders in Elm is straightforward but requires quite a lot of boilerpla
 
 The rest of the code is a standard Elm application. We have a simple model to contain the entered password and the decoded Zxcvbn report
 
-```
+```elm
 type alias Model =
     { password : String
     , zxcvbn : Maybe Zxcvbn
@@ -79,7 +74,7 @@ type alias Model =
 
 In our `update` function we need to handle messages for both password input and password check responses
 
-```
+```elm
 type Msg
     = SetPassword String
     | PasswordChecked Json.Value
@@ -89,7 +84,7 @@ The first message constructor is handled by just setting the password value in t
 
 It's important that we remember to include the `passwordChecked` port in our `subscriptions` function so that we receive responses from the Javascript code. These will arrive wrapped in a `PasswordChecked` message
 
-```
+```elm
 subscriptions : Model -> Sub Msg
 subscriptions _ =
     passwordChecked PasswordChecked

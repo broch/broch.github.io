@@ -1,44 +1,13 @@
 <!DOCTYPE html>
-<html class="h-100" lang="en">
+<html lang="{{ .Language.Lang }}">
   <head>
-    <title>broch.io - {{ .Title }}</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="https://unpkg.com/tachyons@4.9.1/css/tachyons.min.css" />
-    <link rel="stylesheet" type="text/css" href="/css/default.css" />
-    <link rel="stylesheet" type="text/css" href="/css/syntax.css" />
+    {{ partial "head.html" . }}
   </head>
-
-  <body class="h-100 sans-serif">
-    <nav class="w-100 tc fixed bg-white top-0 z-3 shadow-4">
-        <input id="burger" type="checkbox" class="absolute top-2 right-1 dn">
-        <label for="burger" class="dn-l pointer absolute top-1 right-1">
-            <svg id="burger-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 23 23" width="23" height="23" >
-                <line class="burger-bar" x1="0" y1="5" x2="23" y2="5"></line>
-                <line class="burger-bar" x1="0" y1="13" x2="23" y2="13"></line>
-                <line class="burger-bar" x1="0" y1="21" x2="23" y2="21"></line>
-            </svg>
-        </label>
-        <ul id="main-menu" class="overflow-hidden menu db-l w-100 list tc pl0 pt2 pt3-l mv0 f4 fw3">
-            <li clas="absolute static-l top-3 pl3 pl0-l pr5 pt2 mh2 f4 f3-ns di-l">
-                <a href="/" class="link black fw4">
-                    <img class="h2-plus v-mid" alt="broch.io logo: black outline plan view of a broch" src="/images/broch.svg"/>
-                    <span class="b">broch.io</span>
-                </a>
-            </li>
-            <li class="ph4 pl5-l pr4-l di-l pt5 pb2 tl pv0-l"><a href="/" class="link blood-red dim">Home</a></li>
-            <!-- >li class="ph4 di-l pv2 tl pv0-l"><a href="/about.html" class="link black dim">About</a></li -->
-            <li class="ph4 di-l pv2 tl pv0-l"><a href="/contact.html" class="link blood-red dim">Contact</a></li>
-            <li class="ph4 di-l pv2 tl pv0-l"><a href="/archive.html" class="link blood-red dim">Archive</a></li>
-        </ul>
-    </nav>
-    <div class="h-100 pt5 mw7 center flex flex-column justify-between">
-        <main class="pa-2">
+  <body>
+  {{ partial "navbar.html" . }}
   {{ block "main" . }}
   Main block - should be overridden in other templates.
   {{ end }}
-        </main>
-    </div>
   {{ block "footer" . }}{{ end }}
   </body>
 </html>

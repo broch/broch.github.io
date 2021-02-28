@@ -1,11 +1,4 @@
-.cabal-sandbox
-.stack-work
-dist-newstyle/
-.ghc.*
+node_modules/
+public/
 .DS_Store
-cabal.sandbox.config
-dist/
-deploy/
-_cache
-_site
-site
+resources/

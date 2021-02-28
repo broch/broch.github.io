@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.prose a {
+    text-decoration: none;
+    @apply font-medium text-red-900;
+}
+
+.prose p {
+    @apply my-5;
+}
+
+.prose pre {
+    @apply px-4 py-3.5 my-5 rounded-md;
+}
+
+.prose h2 {
+    @apply text-gray-900 text-2xl mt-8 mb-4 font-bold;
+}
+
+.prose h3 {
+    @apply text-gray-900 text-xl mt-5 mb-2.5 font-semibold;
+}
+
+.footnotes ol {
+    list-style: decimal;
+    @apply pl-6;
+}
+

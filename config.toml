@@ -1,9 +1,15 @@
 baseURL = "https://broch.io/"
 languageCode = "en-gb"
 title = "broch.io"
+sectionPagesMenu = "main"
 
 [markup]
   [markup.goldmark]
     [markup.goldmark.renderer]
       unsafe = true
 
+[[menu.main]]
+  name = "Home"
+  weight = 1
+  identifier = "home"
+  url = "/"
