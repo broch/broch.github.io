@@ -2,7 +2,7 @@
 title: Linux Setup with XMonad
 author: Luke
 date: 2016-11-19
-tags: linux,xmonad
+tags: [linux,xmonad]
 thumb: /posts/linux-install/xmonad-desktop.jpg
 summary: Making the move from Mac OSX to a customized Linux setup.
 updated: 2018-02-11
@@ -155,7 +155,7 @@ and in `.msmtprc` [^msmtp-pass]:
 
 ### Mail Address Lookup
 
-When sending emails, programs will usually be able to lookup addresses either in a system address book or their own custom lists. With mutt, you need to decide how you want to maintain your contacts and tell it how to look them up. You can use a simple alias list, or [set up an external query command](https://wiki.archlinux.org/index.php/Mutt#Contact_management). I'm using `abook`, which is a step up up from simple aliases but still very basic. You can use it to query addresses and to add them directly from within mutt. I have the following added to my `.muttrc` file
+When sending emails, programs will usually be able to lookup addresses either in a system address book or their own custom lists. With mutt, you need to decide how you want to maintain your contacts and tell it how to look them up. You can use a simple alias list, or [set up an external query command](https://wiki.archlinux.org/index.php/Mutt#Contact_management). I'm using `abook`, which is a step up from simple aliases but still very basic. You can use it to query addresses and to add them directly from within mutt. I have the following added to my `.muttrc` file
 
     set query_command="abook --mutt-query '%s'"
 

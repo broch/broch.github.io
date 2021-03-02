@@ -3,8 +3,8 @@ title: Build Your Own Haskell Web Framework on WAI
 author: Luke
 date: 2015-04-19
 thumb: /images/haskell-logo.svg
-summary: An investigation into the design of WAI-based Haskell web frameworks.
-tags: haskell,wai
+summary: Investigating the design of WAI-based Haskell web frameworks.
+tags: [haskell,wai]
 ---
 
 This article shows how you can build on top of the basic request/response handling functionality provided by [WAI][wai] and the [Warp server][warp], to support some of the requirements you might have in a typical web application. The content is mostly gleaned from my research into the code of several WAI-based web frameworks to try to understand how they work. Building a web application was one of the things I tackled when I didn't really know Haskell well enough, so hopefully this will be useful if you're at a similar stage and would like to understand what's going on in a bit more depth. I'll outline some of the features these frameworks add, build a similar (but simplified) implementation, and also provide links to the source code of some real-world frameworks built on WAI (such as [Scotty][scotty], [Spock][spock] and [Yesod][yesod]) for comparison.
