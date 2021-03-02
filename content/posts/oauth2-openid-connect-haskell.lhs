@@ -4,14 +4,8 @@ author: Luke
 date: 2016-05-02
 thumb: /posts/oauth2-openid-connect-haskell/openid-icon-250x250.png
 summary: Implementing an OpenID Connect provider in Haskell.
-tags: haskell,identity,oauth2,openid-connect
+tags: [haskell,identity,oauth2,openid-connect]
 ---
-
-<!--
-Run using:
-    stack ghci &minus;-ghci-options oauth2-openid-connect-haskell.lhs
-or compile with stack ghc
--->
 
 I've been working for a while on an implementation of the OpenID Connect specification. Since it was something I already knew quite a bit about from my previous job, it seemed like a good idea for a "real-world" Haskell project. The result is a project called "Broch" [^broch-origin], which is an OpenID Connect identity provider. Features include
 
@@ -68,20 +62,20 @@ Some standard options for authentication and user management are provided -- you
 The configured server uses WAI and can be run using the warp web server:
 
 > {-# LANGUAGE OverloadedStrings #-}
-
+>
 > import Data.Default.Generics (def)
 > import qualified Data.Text as T
 > import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 > import Network.Wai.Handler.Warp
 > import Web.Routing.TextRouting
-
+>
 > import Broch.Model (Client(..), GrantType(..), Scope(..), UserInfo(..))
 > import Broch.Server.Config
 > import Broch.Server (brochServer, authenticatedSubject, authenticateSubject, defaultLoginPage, defaultApprovalPage, passwordLoginHandler)
 > import Broch.Server.Internal (routerToApp, text, invalidateSession)
 > import Broch.Server.Session (defaultKey, defaultLoadSession)
 > import Broch.URI (parseURI)
-
+>
 > main :: IO ()
 > main = do
 >     sessionEncryptionKey <- defaultKey
