@@ -4,8 +4,6 @@
 <svg width="5cm" height="5cm" viewBox="0 0 1250 1250"
      xmlns="http://www.w3.org/2000/svg" version="1.1">
   <title>Broch Logo</title>
-  <desc>A path that draws a triangle</desc>
-
   <path d="M 50 550
            a500,500 0 0,1 500, -500
            l 145 0
