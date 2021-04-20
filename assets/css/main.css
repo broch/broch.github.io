@@ -1,6 +1,8 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+@import "/assets/css/zenburn.css";
+
 
 .form-input {
     @apply focus:ring-blue-300 focus:border-blue-300 flex-grow block w-full min-w-0 rounded-none rounded-md sm:text-sm border-gray-300;
