@@ -5,7 +5,6 @@ date: 2017-01-02
 tags: [elm, physics]
 thumb: /posts/double-slits-elm/slits.png
 summary: A demo of the double-slits experiment (Young's slits) written in Elm.
-updated: 2017-02-16
 ---
 
 I've been meaning to try [Elm](http://elm-lang.org) for some time and finally made the effort to write some code. It's a demo of the [double-slits experiment](https://en.wikipedia.org/wiki/Double-slit_experiment). I already had some Java code which I wrote ages ago, but I've never got round to converting it to Javascript [^swatt]. Elm seems like a nice alternative so I decided to give it a try.
@@ -15,7 +14,7 @@ I've been meaning to try [Elm](http://elm-lang.org) for some time and finally ma
 <div style="margin: 0 auto; width: 750px; height: 500px;">
 <div id="slits"></div>
 </div>
-<div id="controls">
+<div id="controls" class="mt-2">
 <label for="numSlits">Number of slits</label>
 <select id="numSlits" onchange="changeSlits()">
         <option value="1">1</option>

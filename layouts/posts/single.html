@@ -3,8 +3,11 @@
 <main>
 <article class="mx-auto prose prose-lg">
 <h1>{{ .Title }}</h1>
-<p class="text-gray-500 italic">
-Posted on {{ .Date.Format "January 2, 2006" }}
+<p class="block flex display-between text-gray-500 italic">
+{{ .Date.Format "January 2, 2006" }}
+{{ if not (eq .Lastmod .Date) }}
+<span class="ml-3">(Updated, {{ .Lastmod.Format "January 2, 2006" }})</span>
+{{ end }}
 </p>
 {{ .Content }}
 </article>

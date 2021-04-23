@@ -3,11 +3,10 @@ title: 'Checking Password Strength in Elm, Part 2: HIBP Password API'
 author: Luke
 date: 2018-03-05
 draft: true
-thumb: https://imgs.xkcd.com/comics/password_strength.png
-thumbx: /images/elm-logo.svg
+thumb: /posts/elm-have-i-been-pwned/hibp_logo.png
 summary: Checking for compromised passwords with the "Have I been Pwned" API.
 tags: [elm,security]
-updated: 2021-04-18
+lastmod: 2021-04-18
 ---
 
 In the [Part 1](/posts/elm-zxcvbn), we used the Javascript library Zxcvn to check the strength of a password locally. Now we'll extend the code to check the chosen password against the huge database maintained by [Have I been pwned?](https://haveibeenpwned.com). The code for this part is similar, but instead of decoding the result of a call to Javascript to obtain our data, we make an HTTP request and decode the response.

@@ -7,7 +7,7 @@ thumb: https://imgs.xkcd.com/comics/password_strength.png
 thumbx: /images/elm-logo.svg
 summary: Using the Zxcvbn JS library in an Elm application.
 tags: [elm,security,javascript]
-updated: 2021-02-25
+lastmod: 2021-02-25
 ---
 
 As part of a recent Elm project, I wrote some front-end user registration code which required that new users choose a password. I used the [zxcvbn](https://github.com/dropbox/zxcvbn) library to measure password strength and this seems like a good, non-trivial example to show how to call Javascript from Elm. In [Part 2](/posts/elm-have-i-been-pwned), we'll look at how to add extra checks by calling the [Have I Been Pwned passwords API](https://haveibeenpwned.com/API/v3#PwnedPasswords) which maintains a database of half a billion compromised password hashes.

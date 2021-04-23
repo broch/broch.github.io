@@ -1,6 +1,6 @@
 {{ define "main" }}
 <main>
-<div class="py-16 xl:py-36 px-4 sm:px-6 lg:px-8 bg-white overflow-hidden">
+<div class="py-16 xl:py-28 px-4 sm:px-6 lg:px-8 bg-white overflow-hidden">
   <div class="max-w-max lg:max-w-7xl mx-auto">
     <div class="relative z-10 mb-8 md:mb-2 md:px-6">
       <h1 class="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl">🦥 An infrequently updated blog</h1>
@@ -9,7 +9,7 @@
       <div class="relative md:bg-white md:p-6">
         <div class="lg:grid lg:grid-cols-2 lg:gap-6">
           <div class="prose prose-lg text-gray-600 lg:max-w-none">
-            <p>
+            <p class="lg:pt-2">
             I prefer technical articles with a bit of depth to them, so this blog isn't often updated unless I've been done some research on a topic and feel it might be useful or of interest to someone. Hopefully it is :).
             </p>
             <p class="py-3">
@@ -18,8 +18,8 @@
           </div>
           <div>
             {{ range .Pages }}
-            <div>
-              <a href="{{ .Permalink }}" class="mt-2 block">
+            <div class="mb-2 hover:shadow py-2 px-3">
+              <a href="{{ .Permalink }}" class="block">
                 <h1 class="text-xl font-semibold text-gray-900">
                   {{ .Title }}
                 </h1>
