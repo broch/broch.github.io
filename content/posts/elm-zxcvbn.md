@@ -2,7 +2,6 @@
 title: 'Checking Password Strength in Elm, Part 1: Zxcvbn'
 author: Luke
 date: 2018-03-04
-draft: true
 thumb: https://imgs.xkcd.com/comics/password_strength.png
 thumbx: /images/elm-logo.svg
 summary: Using the Zxcvbn JS library in an Elm application.

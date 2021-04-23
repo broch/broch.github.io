@@ -2,7 +2,6 @@
 title: 'Checking Password Strength in Elm, Part 2: HIBP Password API'
 author: Luke
 date: 2018-03-05
-draft: true
 thumb: /posts/elm-have-i-been-pwned/hibp_logo.png
 summary: Checking for compromised passwords with the "Have I been Pwned" API.
 tags: [elm,security]
