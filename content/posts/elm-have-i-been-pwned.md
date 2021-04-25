@@ -13,7 +13,7 @@ In the [Part 1](/posts/elm-zxcvbn), we used the Javascript library Zxcvn to chec
 The full code for both parts can be found [on github](https://github.com/tekul/elm-password-check).
 
 
-<div class="w-2/3 px-10 py-10 border rounded-md shadow mx-auto">
+<div class="w-full px-10 py-10 border rounded-md shadow mx-auto sm:w-2/3">
 <div id="app"></div>
 </div>
 <script src="/posts/elm-zxcvbn/app.js"></script>
