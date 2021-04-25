@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 
 REMOTE="git@github.com:broch/broch.github.io.git"
-SITE="_site/"
-DEPLOY="deploy/"
+DEPLOY="public"
 
 info() {
   printf "  \033[00;32m+\033[0m $1\n"
@@ -17,77 +16,36 @@ fail() {
   exit
 }
 
-# shouldn't happen since `site` binary is usually at root to
-# begin with, but doesn't hurt to check
-dir_check() {
-  if [ ! -f "site.hs" ]; then
-    fail "not at root dir"
-  fi
-}
+if [ ! -f "config.toml" ]; then
+  fail "not at root dir"
+fi
 
-git_check() {
-  git rev-parse || fail "$PWD is already under git control"
-}
+dir_check
 
-setup() {
-  dir_check
+rm -rf $DEPLOY
+mkdir $DEPLOY
 
-  rm -rf $DEPLOY
-  mkdir $DEPLOY
+info "created $DEPLOY"
+pushd $DEPLOY
 
-  info "created $DEPLOY"
-  cd $DEPLOY
-  git_check
+git init -q
+info "initialized git"
+git checkout -b site -q
+info "created site branch"
+git remote add origin $REMOTE
+info "set git remote"
+success "setup complete"
 
-  git init -q
-  info "initialized git"
-  git checkout --orphan master -q
-  info "established master branch"
-  git remote add origin $REMOTE
-  info "established git remote"
+popd
+hugo --minify
 
-  success "setup complete"
-}
+pushd $DEPLOY
 
-deploy() {
-  dir_check
-  [ -d deploy ] || fail 'deploy directory is missing - run setup first.'
+git add --all .
+info "added files to git"
 
-  COMMIT=$(git log -1 HEAD --pretty=format:%H)
-  SHA=${COMMIT:0:8}
+git commit -m "Deploy" -q
+info "committed site"
 
-  info "starting deploy based off of $SHA"
-
-  # clean out deploy and move in the new files
-  rm -rf "$DEPLOY"/*
-  info "cleaned out $DEPLOY"
-
-  info "building site"
-
-  ./site clean > /dev/null
-  ./site rebuild > /dev/null
-
-  cp -r "$SITE"/* $DEPLOY
-  info "copied $SITE into $DEPLOY"
-
-  cd $DEPLOY
-
-  git add --all .
-  info "added files to git"
-
-  git commit -m "generated from $SHA" -q
-  info "committed site"
-
-  git push origin master --force -q
-  success "deployed site"
-}
-
-case "$1" in
-  setup )
-    setup;;
-  deploy )
-    deploy;;
-  * )
-    fail "invalid operation";;
-esac
-
+popd
+echo "cd $DEPLOY and force push site branch to deploy"
