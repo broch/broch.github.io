@@ -3,6 +3,9 @@ languageCode = "en-gb"
 title = "broch.io"
 sectionPagesMenu = "main"
 
+[params]
+  description = "Programming (often in Haskell and Elm), identity management, OpenID, security, Linux, other things."
+
 [markup]
   [markup.goldmark]
     [markup.goldmark.renderer]

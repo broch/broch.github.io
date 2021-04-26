@@ -4,7 +4,7 @@ author: Luke
 date: 2018-03-04
 thumb: https://imgs.xkcd.com/comics/password_strength.png
 thumbx: /images/elm-logo.svg
-summary: Using the Zxcvbn JS library in an Elm application.
+description: Using the Zxcvbn Javascript library in an Elm application.
 tags: [elm,security,javascript]
 lastmod: 2021-02-25
 ---

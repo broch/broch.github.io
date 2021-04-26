@@ -4,7 +4,7 @@ author: Luke
 date: 2016-11-19
 tags: [linux,xmonad]
 thumb: /posts/linux-install/xmonad-desktop.jpg
-summary: Making the move from Mac OSX to a customized Linux setup.
+description: Making the move from Mac OSX to a customized Linux setup.
 lastmod: 2018-02-11
 ---
 
