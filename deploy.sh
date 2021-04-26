@@ -37,7 +37,7 @@ info "set git remote"
 success "setup complete"
 
 popd
-hugo --minify
+hugo --minify --environment production
 
 pushd $DEPLOY
 

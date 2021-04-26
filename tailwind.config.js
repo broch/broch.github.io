@@ -1,7 +1,14 @@
 const defaultTheme = require('tailwindcss/defaultTheme')
 
 module.exports = {
-  purge: ['layouts/**/*/*.html'],
+  purge: {
+    enabled: process.env.HUGO_ENVIRONMENT === 'production',
+    content: [
+      './layouts/**/*.html',
+      './content/**/*.md',
+      './content/**/*.js'
+    ],
+  },
   darkMode: false, // or 'media' or 'class'
   theme: {
     extend: {
