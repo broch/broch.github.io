@@ -10,6 +10,7 @@
   {{ $styles := $styles | minify | fingerprint | resources.PostProcess }}
   <link rel="stylesheet" href="{{ $styles.RelPermalink }}" integrity="{{ $styles.Data.Integrity }}"/>
 {{ end }}
+<link rel="icon" type="image/svg+xml" href="/images/broch.svg">
 <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
 <script src="/js/prism.js"></script>
 
