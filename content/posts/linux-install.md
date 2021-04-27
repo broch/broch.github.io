@@ -33,7 +33,7 @@ The installation was done with an ethernet connection and if this is missing on 
 
 [^net-timeout]: There is a timeout configured somewhere which I changed the first time I ran into the problem, but I can't find the file anymore. In any case it doesn't matter once the ethernet settings have been removed from `/etc/network/interfaces`.
 
-```
+```plain
 # The loopback network interface
 auto lo
 iface lo inet loopback
@@ -47,33 +47,47 @@ iface lo inet loopback
 
 then install the package without the UI parts:
 
-    sudo apt install --no-install-recommends network-manager
+```shell-session
+$ sudo apt install --no-install-recommends network-manager
+```
 
 In a normal desktop setup, you would just select an available WIFI network from a menu of available connections. The `nmcli` command-line tool provides equivalent commands for everything you need to manage connections. NetworkManager will connect automatically to networks in its database when you boot up, so you should only need to interact with it when you are connecting from a new location.
 
 To create a DHCP configured ethernet connection
 
-    nmcli connection add conn-name WiredHome type ethernet autoconnect yes
+```shell-session
+$ nmcli connection add conn-name WiredHome type ethernet autoconnect yes
+```
 
 To list available WIFI connections ('list' is optional)
 
-    nmcli device wifi list
+```shell-session
+$ nmcli device wifi list
+```
 
 To create a new WIFI connection (creates a new connection each time)
 
-    nmcli device wifi connect "My Favourite Cafe SSID" password thepassword name "Cafe"
+```shell-session
+$ nmcli device wifi connect "My Favourite Cafe SSID" password thepassword name "Cafe"
+```
 
 To switch WIFI off
 
-    nmcli radio wifi off
+```shell-session
+$ nmcli radio wifi off
+```
 
 To list all known connections
 
-    nmcli connection show
+```shell-session
+$ nmcli connection show
+```
 
 To delete connections
 
-    nmcli connection delete name_or_id
+```shell-session
+$ nmcli connection delete name_or_id
+```
 
 You can also edit or delete existing connections. Connections are stored as files in the `/etc/NetworkManager/system-connections` directory. Note that the passwords are stored in plain text in these files. I don't mind this since none of the WIFI connections I use are very secret [^nm-gkr].
 
@@ -86,7 +100,7 @@ The `udisks2` package seems to be the back-end which most filesystem management 
 
 To list devices
 
-```
+```shell-session
 $ udisksctl status
 MODEL             REVISION    SERIAL          DEVICE
 -------------------------------------------------
@@ -96,19 +110,27 @@ Databar           5.00        07ABC           sda
 
 To find out more about a device
 
-    udisksctl info -b /dev/sda
+```shell-session
+$ udisksctl info -b /dev/sda
+```
 
 To mount a filesystem
 
-    udisksctl mount -b /dev/sda1
+```shell-session
+$ udisksctl mount -b /dev/sda1
+```
 
 To unmount it
 
-    udisksctl unmount -b /dev/sda1
+```shell-session
+$ udisksctl unmount -b /dev/sda1
+```
 
 To power off the disks
 
-    udisksctl power-off -b /dev/sda
+```shell-session
+$ udisksctl power-off -b /dev/sda
+```
 
 Disks are mounted under `/media/<username>/`.
 
@@ -116,11 +138,15 @@ Disks are mounted under `/media/<username>/`.
 
 We don't want lots of email passwords and other secrets lying about in configuration files. A keyring program stores passwords (or other sensitive data) in an encrypted database, encrypted with a master password. The most common seems to be `gnome-keyring` which uses the derives a key from the login password to encrypt the data. Fortunately it can be used without pulling in anything else Gnome-related:
 
-    sudo apt install --no-install-recommends gnome-keyring libpam-gnome-keyring
+```shell-session
+$ sudo apt install --no-install-recommends gnome-keyring libpam-gnome-keyring
+```
 
 Also install `libsecret-tools` which allows access to the keyring using the `secret-tool` command.
 
-    sudo apt install libsecret-tools
+```shell-session
+$ sudo apt install libsecret-tools
+```
 
 The installation adds an entry to `/etc/pam.d/common-password`, but you need to do some additional configuration if you want to start the keyring daemon when you log in on the console [^pam-auth-update]. I removed the entry and edited the `/etc/pam.d/login` and `/etc/pam.d/passwd` files as described in the [Arch Linux Wiki](https://wiki.archlinux.org/index.php/GNOME/Keyring#PAM_method) [^gkr-pam-problems].
 
@@ -141,15 +167,21 @@ My email setup is heavily influenced by [Pat Brisbin's](https://github.com/pbris
 
 Passwords for accounts can be added to the keyring using secret tool:
 
-    secret-tool store --label="Gmail password for myaccount" gmail myaccount
+```shell-session
+$ secret-tool store --label="Gmail password for myaccount" gmail myaccount
+```
 
 And looked up in `.mbsyncrc`:
 
-    PassCmd "secret-tool lookup gmail myaccount"
+```plain
+PassCmd "secret-tool lookup gmail myaccount"
+```
 
 and in `.msmtprc` [^msmtp-pass]:
 
-    passwordeval secret-tool lookup gmail myaccount | awk 1
+```plain
+passwordeval secret-tool lookup gmail myaccount | awk 1
+```
 
 [^msmtp-pass]: `msmtp` is supposed to integrate directly with the keyring but I couldn't get it to work. In any case it makes more sense to share the same keyring entry between the two. The `passwordeval` option enables this. It fails without the `awk 1`, probably because it doesn't write out the required newline.
 
@@ -157,9 +189,11 @@ and in `.msmtprc` [^msmtp-pass]:
 
 When sending emails, programs will usually be able to lookup addresses either in a system address book or their own custom lists. With mutt, you need to decide how you want to maintain your contacts and tell it how to look them up. You can use a simple alias list, or [set up an external query command](https://wiki.archlinux.org/index.php/Mutt#Contact_management). I'm using `abook`, which is a step up from simple aliases but still very basic. You can use it to query addresses and to add them directly from within mutt. I have the following added to my `.muttrc` file
 
-    set query_command="abook --mutt-query '%s'"
+```plain
+set query_command="abook --mutt-query '%s'"
 
-    macro index,pager a "| abook --add-email\n"
+macro index,pager a "| abook --add-email\n"
+```
 
 The macro bound to 'a' overrides the default `create-alias` command. You can bind it to something else if you want.
 
@@ -169,7 +203,9 @@ One of the reasons for switching systems was to be able to use [XMonad](http://x
 
 The required packages:
 
-    sudo apt install xmonad dmenu xmobar xinit rxvt-unicode-256 x11-xserver-utils
+```shell-session
+$ sudo apt install xmonad dmenu xmobar xinit rxvt-unicode-256 x11-xserver-utils
+```
 
 Initial login still takes place on the console, which I prefer, but XMonad will be started when you run the `startx` command. You can customize the startup process by [writing your own `.xinitrc` file](https://github.com/tekul/dotfiles/blob/master/xinitrc) [^xinit].
 
@@ -185,7 +221,9 @@ I didn't need to do much to [customize XMonad](https://github.com/tekul/dotfiles
 
 The sensitivity of the touchpad can cause problems because you can accidentally brush against it and change focus while you are tying, either to a different point in the same file or to another window altogether. Needless to say this is very annoying. There are tools such as `syndaemon` which disables the touchpad while you are typing and there are also settings to adjust the sensitivity, but I still found this to be an issue so I just disabled the touchpad by adding
 
-    synclient TouchPadOff=1
+```plain
+synclient TouchPadOff=1
+```
 
 to my `.xinitrc` file. I also have a key mapping defined to toggle it on and off if I really want to use it.
 
@@ -211,8 +249,10 @@ Unsurprisingly there are plenty of music players on Linux. My favourite was [`cm
 
 [Gimp](https://www.gimp.org/) is an obvious choice if you want to edit images. It as an optional dependency on the package `tcpd` which seems unnecessary. I also installed the `imagemagick` package which has lots of useful command line tools.
 
-    sudo apt install --no-install-recommends gimp
-    sudo apt install imagemagick
+```shell-session
+$ sudo apt install --no-install-recommends gimp
+$ sudo apt install imagemagick
+```
 
 Gimp 2.8 comes with a single-window mode which works much better with XMonad tiling. This isn't the default, so you need to select it from the `Windows` menu or the tool windows will look weird.
 
@@ -220,11 +260,15 @@ Gimp 2.8 comes with a single-window mode which works much better with XMonad til
 
 Loading and viewing photos is another requirement. My current choice is `gThumb` which seems to do everything I need and has fewer dependencies than the other major competitors I looked at.
 
-    sudo apt install --no-install-recommends gthumb
+```shell-session
+$ sudo apt install --no-install-recommends gthumb
+```
 
 I haven't been able to get it to download images from my phone yet, but I can do so using the command line tool `gphoto2`. For example, to download all files from a specific folder I use:
 
-    gphoto2 -f /store_00010001/DCIM/Camera -P
+```shell-session
+$ gphoto2 -f /store_00010001/DCIM/Camera -P
+```
 
 ## IRC and Instant Messaging
 
@@ -238,11 +282,15 @@ I've been learning (and re-learning) Chinese for a long time and the pinyin inpu
 
 The [`fcitx`](http://fcitx-im.org/) package seems to be pretty much the standard and I found it easy enough to install and get working.
 
-    sudo apt install fcitx fcitx-pinyin
+```shell-session
+$ sudo apt install fcitx fcitx-pinyin
+```
 
 You can add other input methods as desired, for example:
 
-    sudo apt install fcitx-table-wubi fcitx-sunpinyin fcitx-googlepinyin
+```shell-session
+$ sudo apt install fcitx-table-wubi fcitx-sunpinyin fcitx-googlepinyin
+```
 
 and choose which ones are enabled using `fcitx-configtool` or by editing the file `~/.config/fcitx/profile`.
 
@@ -252,13 +300,17 @@ This was enough to get pinyin input working in all applications I tried (and the
 
 Running `locale -a` showed that only English locales were available. To add simplified Chinese run:
 
-    sudo locale-gen zh_CN.UTF-8
+```shell-session
+$ sudo locale-gen zh_CN.UTF-8
+```
 
 You can do this for any of the locales listed in `/usr/share/i18n/SUPPORTED`.
 
 I have a shortcut in my `xmonad.hs` for running emacs. I changed this to set the variable beforehand:
 
-    ((mod4Mask, xK_s), spawn "LC_CTYPE='zh_CN.UTF8' emacs24-x")
+```plain
+((mod4Mask, xK_s), spawn "LC_CTYPE='zh_CN.UTF8' emacs24-x")
+```
 
 and `fcitx` then works in Emacs too (你看得见吗？). Emacs also has its own Chinese input method support but fcitx seems good enough for me.
 

@@ -33,15 +33,16 @@ The full code for both parts can be found [on github](https://github.com/tekul/e
 
 The API requires that we pass the first 5 hexadecimal characters of the SHA-1 hash of our password:
 
-```
+```plain
 GET https://api.pwnedpasswords.com/range/{first 5 hash chars}
 ```
 
-and it returns a list of all the suffixes of hashes with this prefix, along with the number of times each password has been found, with a colon separator [^sha-length]. For example, if we enter the very common password "password1", the SHA-1 is `e38ad214943daad1d64c102faec29de4afe9da3d`. We send a request to `https://api.pwnedpasswords.com/range/e38ad` and we get back a response which includes
+and it returns a list of all the suffixes of hashes with this prefix, along with the number of times each password has been found, with a colon separator [^sha-length]. For example, if we enter the very common password "password1", the SHA-1 is `e38ad214943daad1d64c102faec29de4afe9da3d`. If we sent a request using the `curl` command:
 
 [^sha-length]: Note that a Hex encoded SHA-1 value is 40 characters long, so the suffixes we get back are 35 characters.
 
-```
+```shell-session
+$ curl https://api.pwnedpasswords.com/range/e38ad
 ...
 209CE6FC85F5F7B39B1FADE957076C018B7:2
 20ECFBB285A5C09DE3F6DE40C6CA9F6C894:2
@@ -53,7 +54,7 @@ and it returns a list of all the suffixes of hashes with this prefix, along with
 ...
 ```
 
-So we can see that this password was found almost 2.5 million times!
+we can pick the remaining suffix (`214943daad1d64c102faec29de4afe9da3d`) out of the response and see that this password was found almost 2.5 million times! Definitely one to avoid.
 
 ## Calculating the SHA-1
 
@@ -61,7 +62,7 @@ The first thing we need to be able to do is calculate SHA-1 values. Fortunately,
 
 We write our own `sha1` function to make sure we are always using upper-case Hex values. The API used Hex encoding and thought it isn't case sensitive, the response is always upper-case and we're going to be comparing with those values.
 
-``` elm
+```elm
 sha1 : String -> String
 sha1 s =
     SHA1.fromString s
@@ -73,7 +74,7 @@ sha1 s =
 
 This is very simple, using the standard `elm/http` package:
 
-``` elm
+```elm
 getPwnedMatches : String -> Cmd Msg
 getPwnedMatches password =
     Http.get
@@ -84,7 +85,7 @@ getPwnedMatches password =
 
 The `PwnedResults` msg is called when we get a response back from the API. So we need to add this to our `Msg` type:
 
-``` elm
+```elm
 type Msg
     = SetPassword String
     | ZxcvbnChecked Json.Value
@@ -101,13 +102,12 @@ We don't use a JSON decoder here since the API returns a text response, as descr
 
 The code to decode the response is (slightly simplified):
 
-``` elm
+```elm
 pwnedCountFromResponse : String -> String -> Maybe Int
 pwnedCountFromResponse password response =
     let
         suffix =
             sha1 password |> String.dropLeft 5
-
     in
         String.lines response
             |> List.filter (String.startsWith suffix)

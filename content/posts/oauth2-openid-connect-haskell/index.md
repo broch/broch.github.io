@@ -47,7 +47,7 @@ Some standard options for authentication and user management are provided -- you
 
 The configured server uses WAI and can be run using the warp web server:
 
-``` haskell
+```haskell
 {-# LANGUAGE OverloadedStrings #-}
 
 import Data.Default.Generics (def)
@@ -90,9 +90,7 @@ main = do
     authenticate username password
       | username == password = return (Just username)
       | otherwise            = return Nothing
-```
 
-``` haskell
     loadUserInfo uid _ = return . Just $ def
       { sub = uid
       , email = Just (T.concat [uid, "@someplace.com"])
@@ -109,7 +107,7 @@ Neither OAuth2 nor OpenID Connect define how authentication of the end user shou
 
 To add persistent storage, there are SQLite and PostgreSQL backs end available, which are built on top of the `sqlite-simple` and `postresql-simple` packages. These are used in the [command-line source](https://github.com/tekul/broch/blob/master/broch-server/broch.hs) which you can examine along with the project readme for more details. We could swap from in-memory to using Postgres just by changing the configuration to
 
-``` haskell
+```haskell
 config <- postgreSQLBackend pool <$> inMemoryConfig issuer opKeys Nothing
 ```
 
@@ -121,30 +119,38 @@ Using the server above, we can work through a typical flow which a client applic
 
 The first step is a redirection from the client to the authorization server, which creates the [following request](http://localhost:3000/oauth/authorize?client_id=123&state=982147&response_type=code&redirect_uri=http%3A%2F%2Fc123.client) [^6]:
 
-    http://localhost:3000/oauth/authorize?client_id=123&state=982147&response_type=code&scope=openid&redirect_uri=http%3A%2F%2Fc123.client
+```plain
+http://localhost:3000/oauth/authorize?client_id=123&state=982147&response_type=code&scope=openid&redirect_uri=http%3A%2F%2Fc123.client
+```
 
 The user will be asked to log in (if they aren't already authenticated to the authorization server), and then to approve the request for `openid` scope. Once this is granted, the authorization server redirects back to the client application, with an authorization code:
 
-    http://c123.client/?state=982147&code=14581d956c81535c&scope=openid
+```plain
+http://c123.client/?state=982147&code=14581d956c81535c&scope=openid
+```
 
 The client then exchanges the code at the token endpoint for an `access_token` and an `id_token`, which are returned in a JSON response:
 
-    $ curl -u 123:abc123 -H "Accept: application/json" -X POST -d code=14581d956c81535c -d client_id=123 -d redirect_uri=http://c123.client -d grant_type=authorization_code http://localhost:3000/oauth/token
-    {"expires_in":3600,"access_token":"eyJhbGciOiJSU0EtT0FFUCIsImtpZCI6IjIwMTUtMDUtMTlUMjA6MjI6MjUuMTc2MjY1MDAwMDAwWiIsImVuYyI6IkExMjhHQ00ifQ.bESkEA-0vGBhnftPuRLYcxvZuD6xbdTrp4h34zBxsn0AhNgXxAOsMsvC-14YijuMBAU4SxkMsBoxL4P4vEWODGrVwK8xb0_OogyxsrCSRYiYwYopU3xli9k3Dw_LpP0vFC60r1oGGsGexeKsAYy9BwL5kGeTNt9GtnjI2Q-WnrA.oZvgWxUtv4-RNddd.xcaT8kydCGN4Oe_JH5QvFTxsE9YJMJ976b1PEAkHvjHj2xcEM1pE_3MCsEGOV7tSho6omNCJFZC_AiKfP2s4QBLvXxG9kMON7OIIjrx4FKDuTAoZgtl-4aiQ_mt-ppt2lVf0pr03cYTvoBzJK85ofMnNeLsnrjA3oGB-xGxXSG5ZKkyutNo.X4ncv5rOTTBOE6hdclpWYg","token_type":"bearer","id_token":"eyJhbGciOiJSUzI1NiIsImtpZCI6IjIwMTUtMDUtMTlUMjA6MjI6MjQuMTc2MjY1MDAwMDAwWiJ9.eyJzdWIiOiJjYXQiLCJleHAiOjE0MzIxMzkxMDgsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6MzAwMCIsImlhdCI6MTQzMjEzODEwOCwiYXV0aF90aW1lIjoxNDMyMTM3MTY5LCJhdWQiOlsiMTIzIl19.f_EJI-wiDT1oa0Cta12yco73BurkYTCR-yrxl3k5zsYO7wNrHc9y2QE-ahmkdsiHdlzCZ4roF7_fVXRMHL2JNsC3S6oyeWfO6E-8sjsTFBRvkDSOCbYwm7HnYW-VWZ1e2M8g_RgZb4SVzW4OK55QntRvlwW6Aj6Tu_AN6Dg7Ua4"}
+```shell-session
+$ curl -u 123:abc123 -H "Accept: application/json" -X POST -d code=14581d956c81535c -d client_id=123 -d redirect_uri=http://c123.client -d grant_type=authorization_code http://localhost:3000/oauth/token
+{"expires_in":3600,"access_token":"eyJhbGciOiJSU0EtT0FFUCIsImtpZCI6IjIwMTUtMDUtMTlUMjA6MjI6MjUuMTc2MjY1MDAwMDAwWiIsImVuYyI6IkExMjhHQ00ifQ.bESkEA-0vGBhnftPuRLYcxvZuD6xbdTrp4h34zBxsn0AhNgXxAOsMsvC-14YijuMBAU4SxkMsBoxL4P4vEWODGrVwK8xb0_OogyxsrCSRYiYwYopU3xli9k3Dw_LpP0vFC60r1oGGsGexeKsAYy9BwL5kGeTNt9GtnjI2Q-WnrA.oZvgWxUtv4-RNddd.xcaT8kydCGN4Oe_JH5QvFTxsE9YJMJ976b1PEAkHvjHj2xcEM1pE_3MCsEGOV7tSho6omNCJFZC_AiKfP2s4QBLvXxG9kMON7OIIjrx4FKDuTAoZgtl-4aiQ_mt-ppt2lVf0pr03cYTvoBzJK85ofMnNeLsnrjA3oGB-xGxXSG5ZKkyutNo.X4ncv5rOTTBOE6hdclpWYg","token_type":"bearer","id_token":"eyJhbGciOiJSUzI1NiIsImtpZCI6IjIwMTUtMDUtMTlUMjA6MjI6MjQuMTc2MjY1MDAwMDAwWiJ9.eyJzdWIiOiJjYXQiLCJleHAiOjE0MzIxMzkxMDgsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6MzAwMCIsImlhdCI6MTQzMjEzODEwOCwiYXV0aF90aW1lIjoxNDMyMTM3MTY5LCJhdWQiOlsiMTIzIl19.f_EJI-wiDT1oa0Cta12yco73BurkYTCR-yrxl3k5zsYO7wNrHc9y2QE-ahmkdsiHdlzCZ4roF7_fVXRMHL2JNsC3S6oyeWfO6E-8sjsTFBRvkDSOCbYwm7HnYW-VWZ1e2M8g_RgZb4SVzW4OK55QntRvlwW6Aj6Tu_AN6Dg7Ua4"}
+```
 
 The `id_token` is defined by the spec to be a JWT. In this implementation, access tokens are also JWTs by default.
 
 The client can then use the access token to request more information about the user:
 
-    $ TOKEN=eyJhbGciOiJSU0EtT0FFUCIsImtpZCI6IjIwMTUtMDUtMTlUMjA6MjI6MjUuMTc2MjY1MDAwMDAwWiIsImVuYyI6IkExMjhHQ00ifQ.bESkEA-0vGBhnftPuRLYcxvZuD6xbdTrp4h34zBxsn0AhNgXxAOsMsvC-14YijuMBAU4SxkMsBoxL4P4vEWODGrVwK8xb0_OogyxsrCSRYiYwYopU3xli9k3Dw_LpP0vFC60r1oGGsGexeKsAYy9BwL5kGeTNt9GtnjI2Q-WnrA.oZvgWxUtv4-RNddd.xcaT8kydCGN4Oe_JH5QvFTxsE9YJMJ976b1PEAkHvjHj2xcEM1pE_3MCsEGOV7tSho6omNCJFZC_AiKfP2s4QBLvXxG9kMON7OIIjrx4FKDuTAoZgtl-4aiQ_mt-ppt2lVf0pr03cYTvoBzJK85ofMnNeLsnrjA3oGB-xGxXSG5ZKkyutNo.X4ncv5rOTTBOE6hdclpWYg
-    $ curl -H "Accept: application/json" -H "Authorization: Bearer $TOKEN" http://localhost:3000/connect/userinfo
-    {"email":"cat@someplace.com","sub":"cat"}
+```shell-session
+$ TOKEN=eyJhbGciOiJSU0EtT0FFUCIsImtpZCI6IjIwMTUtMDUtMTlUMjA6MjI6MjUuMTc2MjY1MDAwMDAwWiIsImVuYyI6IkExMjhHQ00ifQ.bESkEA-0vGBhnftPuRLYcxvZuD6xbdTrp4h34zBxsn0AhNgXxAOsMsvC-14YijuMBAU4SxkMsBoxL4P4vEWODGrVwK8xb0_OogyxsrCSRYiYwYopU3xli9k3Dw_LpP0vFC60r1oGGsGexeKsAYy9BwL5kGeTNt9GtnjI2Q-WnrA.oZvgWxUtv4-RNddd.xcaT8kydCGN4Oe_JH5QvFTxsE9YJMJ976b1PEAkHvjHj2xcEM1pE_3MCsEGOV7tSho6omNCJFZC_AiKfP2s4QBLvXxG9kMON7OIIjrx4FKDuTAoZgtl-4aiQ_mt-ppt2lVf0pr03cYTvoBzJK85ofMnNeLsnrjA3oGB-xGxXSG5ZKkyutNo.X4ncv5rOTTBOE6hdclpWYg
+$ curl -H "Accept: application/json" -H "Authorization: Bearer $TOKEN" http://localhost:3000/connect/userinfo
+{"email":"cat@someplace.com","sub":"cat"}
+```
 
 ## Configuration
 
 One of the design issues I had trouble with was the how best to build a configurable server application. It's easy enough to come up with intelligent defaults for an OpenID Provider, but pretty much all the functionality needs to be pluggable [^7]. The `Broch.Server.Config` module contains data structures for settings which are used to initialize a server, and also functions which define pluggable behaviour
 
-``` haskell
+```haskell
 data Config m s = Config
     { issuerUrl                  :: Text
     , keyRing                    :: KeyRing m
@@ -168,7 +174,7 @@ data Config m s = Config
 
 The functions are type aliases, for example
 
-``` haskell
+```haskell
 type LoadClient m = ClientId -> m (Maybe Client)
 ```
 
@@ -232,7 +238,7 @@ The rotation of [signing](http://openid.net/specs/openid-connect-core-1_0.html#R
 
 The project has been a good learning experience and I've found Haskell to be particularly suitable for working to a complicated specification like OAuth2/OpenID Connect. The different errors and outcomes of a request can be modelled nicely using algebraic data types and using the `Either` type allows us to deal with all the error conditions defined by the spec while keeping IO errors (for example, data access errors) completely separate. As an example, the return type for `processAuthorizationRequest` is
 
-``` haskell
+```haskell
 m (Either AuthorizationRequestError URI)
 ```
 
@@ -246,7 +252,7 @@ The code runs in an arbitrary monad and thus does not contain any IO code. In pr
 
 The actual data type is:
 
-``` haskell
+```haskell
 data AuthorizationRequestError
     = MaliciousClient EvilClientError
     | RequiresAuthentication

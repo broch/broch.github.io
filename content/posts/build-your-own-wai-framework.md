@@ -29,7 +29,7 @@ WAI ("web application interface") is a Haskell HTTP request/response API. Theore
 
 Request handling in WAI is defined by the `Application` type [^yesod-book-wai] :
 
-``` haskell
+```haskell
 type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
 ```
 
@@ -37,7 +37,7 @@ The [`Request`][wai-request] gives access to the request headers, query string, 
 
 [wai-request]: http://hackage.haskell.org/package/wai-3.0.2.1/docs/Network-Wai-Internal.html#t:Request
 
-``` haskell
+```haskell
 {-# LANGUAGE OverloadedStrings #-}
 import Network.HTTP.Types (status200)
 import Network.Wai
@@ -61,7 +61,7 @@ The handler monad provides convenient (read-only) access to the request (headers
 [^rwst]: The [RWST](https://hackage.haskell.org/package/mtl-2.1.2/docs/Control-Monad-RWS-Strict.html#g:2) monad transformer is another possibility and is used by the [Spock Framework](https://github.com/agrafix/Spock/blob/0.7.5.1/src/Web/Spock/Internal/Wire.hs#L89). In this case the "writer" part of the monad is ignored.
 [^apiary-action]: For an example which builds its own monad from scratch, see Apiary's [`ActionT`](http://hackage.haskell.org/package/apiary-1.2.0/docs/src/Control-Monad-Apiary-Action-Internal.html#ActionT) or Simple's [`ControllerT`](https://github.com/alevy/simple/blob/v0.9.0.0/simple/src/Web/Simple/Controller/Trans.hs#L51).
 
-``` haskell
+```haskell
 {-# LANGUAGE OverloadedStrings #-}
 
 import Control.Monad.Reader
@@ -100,13 +100,13 @@ Our application will consist of request handler functions written in the `Handle
 
 A very simple routing option is to just pattern match on the `pathInfo` property of the WAI `Request`, which is of type `[Text]`:
 
-``` haskell
+```haskell
 type Router = [Text] -> Handler ()
 ```
 
 We can then build our application as a simple routing table:
 
-``` haskell
+```haskell
 myAppRouter :: Router
 myAppRouter path = case path of
   ["home"]    -> myHomePageHandler
@@ -141,7 +141,7 @@ So how do we make our monad short-circuit? One option is to add the `EitherT` mo
 [^either-except]: You may notice that `ExceptT` is [used in practice](https://github.com/scotty-web/scotty/blob/master/Web/Scotty/Internal/Types.hs#L137) instead of `EitherT`. However, this requires version 2.2.1 or later of the `mtl` library, which in turn requires the use of `transformers 0.4.*`. GHC 7.8 comes with transformers 0.3 so you can end up with conflicting versions in your project if it depends on GHC and cabal will complain. `EitherT` does the same job, more or less, so we stick with that for now.
 
 
-``` haskell
+```haskell
 data HandlerResult = Redirect ByteString     -- Redirect to a URL
                    | ResponseComplete        -- Send the response
                    | HandlerError ByteString -- Send an internal error response
@@ -163,7 +163,7 @@ As things stand now, we have a WAI `Request` object passed as an argument to the
 The complete `runHandler` function looks like this:
 
 
-``` haskell
+```haskell
 import Network.Wai.Parse
 
 runHandler :: Request -> Handler () -> IO Response
@@ -206,7 +206,7 @@ When processing a request, we typically want to read parameters and/or the reque
 
 [^sec-param]: For example, we might want to report an error if sensitive data like a password is sent in a URL. We couldn't do this using Scotty's `param` function, for instance.
 
-``` haskell
+```haskell
 postParam :: Text -> Handler Text
 postParam name = asks postParams >>= lookupParam name
 
@@ -221,7 +221,7 @@ lookupParam name params = case M.lookup name params of
 
 WAI's `Request` record type has a field called `requestBody` which is of type `IO ByteString`. It produces the complete body a chunk at a time, returning an empty `ByteString` when the body is completely consumed. There's also a convenience function to do this, which we can wrap to create our `body` function:
 
-``` haskell
+```haskell
 body :: Handler BL.ByteString
 body = asks waiReq >>= liftIO . strictRequestBody
 ```
@@ -240,7 +240,7 @@ For the response, we'll start by writing functions to:
 
 The redirect function just takes a URL as a `ByteString` and short-circuits with the corresponding `HandlerResult` value:
 
-``` haskell
+```haskell
 redirect :: ByteString -> Handler a
 redirect = throwError . Redirect
 ```
@@ -249,14 +249,14 @@ The `runHandler` function we wrote above does the rest of the work, setting the 
 
 Setting the response status to a different value is easily done by changing the state:
 
-``` haskell
+```haskell
 status :: Status -> Handler ()
 status s = modify $ \rs -> rs { resStatus = s }
 ```
 
 and we can write the response content as text, JSON or (Blaze) HTML using the following functions:
 
-``` haskell
+```haskell
 import Data.Aeson
 import Text.Blaze.Html (Html)
 import Text.Blaze.Html.Renderer.Utf8 (renderHtml)
@@ -284,19 +284,17 @@ setContentType = setHeader "Content-Type"
 
 So far we've assumed that every `Handler` will produce a value of type `Either HandlerResult ()`, but what happens if the code throws an exception instead? We can test this easily by just adding the following route to our `myAppRouter` above:
 
-``` haskell
+```haskell
 ["eek"]  -> error "eek!"
 ```
 
 Requesting the URL `/eek` from a browser returns the text response "Something went wrong" with a 500 response code. This is the default response produced by Warp's internal error handler and it is easily customized [^warp-exception]. Alternatively we can catch the exception ourselves. We still need a function to convert our router into an `Application`, so we can do it there:
 
-``` haskell
-
+```haskell
 routerToApplication :: Router -> Application
 routerToApplication route req respond =
   (runHandler req $ route pathInfo req)
     `catch` λ(e :: SomeException) -> return $ responseLBS internalServerError500 [] $ "Internal error"
-
 ```
 
 [^warp-exception]: The [`setOnExceptionResponse`](http://hackage.haskell.org/package/warp-3.0.5/docs/Network-Wai-Handler-Warp.html#v:setOnExceptionResponse) setting can be used for customization. The exception is caught and the response sent in the [`serveConnection`](https://github.com/yesodweb/wai/blob/warp/3.0.5/warp/Network/Wai/Handler/Warp/Run.hs#L282) function. The exception is then re-thrown to the `fork` function which [calls the exception handler](https://github.com/yesodweb/wai/blob/warp/3.0.5/warp/Network/Wai/Handler/Warp/Run.hs#L256) configured with [`setOnException`](http://hackage.haskell.org/package/warp-3.0.5/docs/Network-Wai-Handler-Warp.html#v:setOnException) and cleans up resources.

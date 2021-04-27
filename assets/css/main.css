@@ -1,7 +1,7 @@
 @import "tailwindcss/base";
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
-@import "/assets/css/zenburn.css";
+@import "/assets/css/prism.css";
 
 
 .form-input {
@@ -17,6 +17,12 @@
     @apply my-1;
 }
 
+/* Hide the HIBP button in the elm-zxcvbn article (it's covered in part 2) */
 #elm-zxcvbn-app button {
     display: none;
+}
+
+/* Fix up prism.js a bit so it looks better with Tailwind Typography defaults */
+.prose pre, .prose pre[class*="language-"] {
+    @apply text-gray-50 bg-gray-900 rounded-md border-0;
 }

@@ -13,7 +13,9 @@ As part of a recent Elm project, I wrote some front-end user registration code w
 
 The full code for both parts can be found [on github](https://github.com/tekul/elm-password-check).
 
-Zxcvbn is a password strength estimator which makes use of password frequency lists, dictionaries and common patterns. Note that the default version is heavily biased towards English language so it would need to be built with custom dictionaries if that's an issue [^language]. The strength of a password is based on estimating the number of guesses it would take for a password cracker to find it. It's not perfect, but is better than forcing annoying rules on users such as adding [numbers and symbols to passwords](https://www.xkcd.com/936/) which is no longer seen as good practice. Standards authorities like NIST now also [recommend](https://stealthbits.com/blog/nist-password-guidelines/) disallowing simple sequences and rejecting passwords which are found in password breach databases.
+Zxcvbn is a password strength estimator which makes use of password frequency lists, dictionaries and common patterns. Note that the default version is heavily biased towards English language so it would need to be built with custom dictionaries if that's an issue [^language].
+
+The strength of a password is based on estimating the number of guesses it would take for a password cracker to find it. It's not perfect, but is better than forcing annoying rules on users such as adding [numbers and symbols to passwords](https://www.xkcd.com/936/) which is no longer seen as good practice. Standards authorities like NIST now [recommend](https://stealthbits.com/blog/nist-password-guidelines/) disallowing simple sequences and rejecting passwords which are found in password breach databases.
 
 [^language]: For example, it will flag up "iloveyou" as being one of the most common passwords but it doesn't have a problem with "ichliebedich". Have I Been Pwned? doesn't suffer from this issue and will tell you that the latter has been found more than 16000 times in password data breaches, so is clearly unsuitable.
 
@@ -50,7 +52,7 @@ Zxcvbn produces a JSON value containing a score for the password and information
 
 In Javascript we need to hook up our port implementations to Javascript code. The `checkPassword` function is just implemented as a call to the `zxcvbn` function, passing in the password. It then sends the response back through the `passwordChecked` port.
 
-``` javascript
+```javascript
 app.ports.checkPassword.subscribe(function(password) {
     var report = zxcvbn(password);
     app.ports.passwordChecked.send(report);

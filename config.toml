@@ -11,7 +11,7 @@ sectionPagesMenu = "main"
     [markup.goldmark.renderer]
       unsafe = true
   [markup.highlight]
-    noClasses=false
+    codeFences=false
 
 [[menu.main]]
   name = "Home"
