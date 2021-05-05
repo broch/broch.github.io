@@ -20,8 +20,6 @@ if [ ! -f "config.toml" ]; then
   fail "not at root dir"
 fi
 
-dir_check
-
 rm -rf $DEPLOY
 mkdir $DEPLOY
 

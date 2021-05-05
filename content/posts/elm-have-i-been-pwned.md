@@ -1,5 +1,5 @@
 ---
-title: 'Checking Password Strength in Elm, Part 2: HIBP Password API'
+title: 'Checking Password Strength in Elm, Part 2: Have I Been Pwned API'
 author: Luke
 date: 2018-03-05
 description: Checking for compromised passwords in Elm using the "Have I been Pwned" API.
