@@ -28,10 +28,13 @@ pushd $DEPLOY
 
 git init -q
 info "initialized git"
-git checkout -b site -q
-info "created site branch"
+#git checkout -b site -q
+#info "created site branch"
 git remote add origin $REMOTE
 info "set git remote"
+git fetch origin site
+git checkout site
+info "checked out site"
 success "setup complete"
 
 popd
@@ -46,4 +49,4 @@ git commit -m "Deploy" -q
 info "committed site"
 
 popd
-echo "cd $DEPLOY and force push site branch to deploy"
+echo "cd $DEPLOY squash, and force push site branch to deploy"
