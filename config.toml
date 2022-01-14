@@ -1,6 +1,6 @@
-baseURL = "https://broch.io/"
+baseURL = "https://broch.tech/"
 languageCode = "en-gb"
-title = "broch.io"
+title = "broch.tech"
 sectionPagesMenu = "main"
 
 [params]

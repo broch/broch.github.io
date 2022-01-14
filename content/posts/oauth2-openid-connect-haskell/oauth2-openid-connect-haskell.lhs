@@ -109,7 +109,7 @@ The configured server uses WAI and can be run using the warp web server:
 >       , email = Just (T.concat [uid, "@someplace.com"])
 >       }
 
-The web code is similar to that in [an earlier article on WAI](http://broch.io/posts/build-your-own-wai-framework/), but includes the concept of a session, since users have to be able to authenticate to the authorization server. The `brochServer` function converts the configuration into a routing table, mapping URL paths to web handler functions and we add extra handlers for login/logout processing also to render a very basic home page. The [reroute](hackage.haskell.org/package/reroute) package is used to build the routing table. The table is then converted into a WAI `Application` which we can run.
+The web code is similar to that in [an earlier article on WAI](http://broch.tech/posts/build-your-own-wai-framework/), but includes the concept of a session, since users have to be able to authenticate to the authorization server. The `brochServer` function converts the configuration into a routing table, mapping URL paths to web handler functions and we add extra handlers for login/logout processing also to render a very basic home page. The [reroute](hackage.haskell.org/package/reroute) package is used to build the routing table. The table is then converted into a WAI `Application` which we can run.
 
 We've added a single client which is allowed to use the authorization code flow and will use basic authentication (the default) at the token endpoint.
 
