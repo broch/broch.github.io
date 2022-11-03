@@ -1,14 +1,14 @@
 <title>{{ .Title }}</title>
-<meta http-equiv="Content-Type" content="text/html" charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="description" content="{{ if .Params.Description }}{{ .Params.Description }}{{ else if .Site.Params.Description }}{{ .Site.Params.Description }}{{ end }}" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="{{ if .Params.Description }}{{ .Params.Description }}{{ else if .Site.Params.Description }}{{ .Site.Params.Description }}{{ end }}">
 {{ $styles := resources.Get "css/main.css" | postCSS }}
 
 {{ if .Site.IsServer }}
-  <link rel="stylesheet" href="{{ $styles.RelPermalink }}"/>
+  <link rel="stylesheet" href="{{ $styles.RelPermalink }}">
 {{ else }}
   {{ $styles := $styles | minify | fingerprint | resources.PostProcess }}
-  <link rel="stylesheet" href="{{ $styles.RelPermalink }}" integrity="{{ $styles.Data.Integrity }}"/>
+  <link rel="stylesheet" href="{{ $styles.RelPermalink }}" integrity="{{ $styles.Data.Integrity }}">
 {{ end }}
 <link rel="icon" type="image/svg+xml" href="/images/broch.svg">
 <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
