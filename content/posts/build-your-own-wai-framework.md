@@ -304,7 +304,7 @@ routerToApplication route req respond =
 
 Even though WAI is not really a standard web interface supported by multiple servers, it *is* common to multiple frameworks so an understanding WAI and Warp is useful if you are likely to be developing Haskell web applications.
 
-In this article we've built a simple set of functions with which we can write web handlers which would look quite similar to those of a framework like Scotty, and you should now hopefully have a clearer idea of how they work. The code is available from the accompanying samples repository [on github](https://github.com/broch/brochio-samples/blob/byowai/ByoWai.hs), on the `byowai` branch. The branch commit history closely follows the structure of the article and should compile at each stage. For a more complex example, you can also see this kind of code in use in a project I've been working on which is an implementation of the [OpenID Connect specification][openid-connect] in Haskell [^broch]. I'll hopefully find time to write up more articles on this topic as the development proceeds.
+In this article we've built a simple set of functions with which we can write web handlers which would look quite similar to those of a framework like Scotty, and you should now hopefully have a clearer idea of how they work. The full code can be downloaded [here](BuildYourOwnWai.hs). For a more complex example, you can also see this kind of code in use in a project I've been working on which is an implementation of the [OpenID Connect specification][openid-connect] in Haskell [^broch]. I'll hopefully find time to write up more articles on this topic as the development proceeds.
 
 [openid-connect]: http://openid.net/developers/specs/
 
