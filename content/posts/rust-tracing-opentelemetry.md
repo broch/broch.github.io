@@ -1,8 +1,8 @@
 ---
-title: 'Flexible Tracing with Rust and OpenTelemetry'
+title: 'Flexible Tracing with Rust and OpenTelemetry OTLP'
 author: Luke
 date: 2023-04-06
-description: Rust tracing with OpenTelemetry OTLP and multiple backends
+description: Exporting traces to Jaeger, Honeycomb and other backends using Rust tracing and OpenTelemetry.
 thumb: /posts/rust-tracing-opentelemetry/rust-otel.webp
 tags: [rust,tracing,telemetry]
 ---
