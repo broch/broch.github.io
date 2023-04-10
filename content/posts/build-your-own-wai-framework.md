@@ -3,6 +3,7 @@ title: Build Your Own Haskell Web Framework on WAI
 author: Luke
 date: 2015-04-19
 thumb: /images/haskell-logo.svg
+thumb_alt: The Haskell logo
 description: Investigating the design of WAI-based Haskell web frameworks.
 tags: [haskell,wai]
 ---

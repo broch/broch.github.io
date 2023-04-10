@@ -3,6 +3,7 @@ title: 'Checking Password Strength in Elm, Part 1: Zxcvbn'
 author: Luke
 date: 2018-03-04
 thumb: https://imgs.xkcd.com/comics/password_strength.png
+thumb_alt: The "Correct Horse Battery Staple" password complexity cartoon from xkcd.com
 thumbx: /images/elm-logo.svg
 description: Using the Zxcvbn Javascript library in an Elm application.
 tags: [elm,security,javascript]

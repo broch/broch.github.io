@@ -18,7 +18,9 @@
 
       <div class="flex flex-col border rounded-lg dark:border-neutral-900 shadow-lg dark:shadow-none overflow-hidden hover:shadow-xl">
         <div class="flex-shrink-0">
-            <img class="h-60 w-full object-cover" src="{{ .Params.thumb }}" alt="">
+        <a href="{{.Permalink}}">
+            <img class="h-60 w-full object-cover" src="{{ .Params.thumb }}" alt="{{ .Params.thumb_alt }}">
+        </a>
         </div>
         <div class="flex-1 bg-white dark:bg-neutral-800 p-6 flex flex-col justify-between">
           <div class="flex-1">

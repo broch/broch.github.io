@@ -3,6 +3,7 @@ title: OAuth2 and OpenID Connect in Haskell
 author: Luke
 date: 2016-05-02
 thumb: /posts/oauth2-openid-connect-haskell/openid-logo.png
+thumb_alt: The OpenID logo
 description: Implementing an OpenID Connect provider in Haskell.
 tags: [haskell,identity,oauth2,openid-connect]
 ---

@@ -4,6 +4,7 @@ author: Luke
 date: 2017-01-02
 tags: [elm, physics]
 thumb: /posts/double-slits-elm/slits.png
+thumb_alt: A diffraction pattern rendered by the sample app, showing 5 slits on the left and an intensity graph on the right
 description: A demo of the double-slits experiment (Young's slits) written in Elm.
 ---
 

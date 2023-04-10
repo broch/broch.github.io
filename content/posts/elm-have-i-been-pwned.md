@@ -4,6 +4,7 @@ author: Luke
 date: 2018-03-05
 description: Checking for compromised passwords in Elm using the "Have I been Pwned" API.
 thumb: /posts/elm-have-i-been-pwned/hibp_logo.png
+thumb_alt: The HIBP logo
 tags: [elm,security]
 lastmod: 2021-04-18
 ---

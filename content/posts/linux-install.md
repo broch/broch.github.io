@@ -4,6 +4,7 @@ author: Luke
 date: 2016-11-19
 tags: [linux,xmonad]
 thumb: /posts/linux-install/xmonad-desktop.jpg
+thumb_alt: Screen capture of a tiling window manager with a text editor, cmus music player and terminal
 description: Making the move from Mac OSX to a customized Linux setup.
 lastmod: 2018-02-11
 ---
