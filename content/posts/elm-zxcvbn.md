@@ -19,7 +19,7 @@ The strength of a password is based on estimating the number of guesses it would
 
 [^language]: For example, it will flag up "iloveyou" as being one of the most common passwords but it doesn't have a problem with "ichliebedich". Have I Been Pwned? doesn't suffer from this issue and will tell you that the latter has been found more than 16000 times in password data breaches, so is clearly unsuitable.
 
-<div id="elm-zxcvbn-app" class="w-full mt-10 px-10 py-10 border rounded-md shadow mx-auto sm:w-2/3">
+<div id="elm-zxcvbn-app" class="w-full mt-10 px-10 py-10 border rounded-md shadow-lg bg-neutral-200 text-neutral-700 dark:shadow-none mx-auto sm:w-2/3">
 <div id="app"></div>
 </div>
 <script src="app.js"></script>

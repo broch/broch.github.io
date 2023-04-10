@@ -16,7 +16,7 @@ I've been meaning to try [Elm](http://elm-lang.org) for some time and finally ma
 </div>
 <div id="controls" class="mt-2">
 <label for="numSlits">Number of slits</label>
-<select id="numSlits" onchange="changeSlits()">
+<select class="text-neutral-500" id="numSlits" onchange="changeSlits()">
         <option value="1">1</option>
         <option value="2" selected>2</option>
         <option value="3">3</option>
