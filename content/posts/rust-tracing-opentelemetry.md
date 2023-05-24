@@ -6,6 +6,7 @@ description: Exporting traces to Jaeger, Honeycomb and other backends using Rust
 thumb: /posts/rust-tracing-opentelemetry/rust-otel.webp
 thumb_alt: The OpenTelemetry telescope logo and Ferris, the Rust mascot, superimposed on a Jaeger telemetry trace view
 tags: [rust,tracing,telemetry]
+lastmod: 2023-05-24
 ---
 
 If you have been using log files all your life, the telemetry ecosytem can be a bit daunting for a newcomer. And if you've just discovered Rust's [tracing](https://tokio.rs/#tk-lib-tracing) framework, it's not immediately clear where to look beyond the basic examples. There are a lot of crates and APIs to get your head round and a lot of new terminology. This article isn't intended to be a complete tutorial but will explain how to set up a configuration which works with multiple systems and hopefully provide some insight into how things fit together. For an overview of telemetry, the [OpenTelemetry Observability Primer](https://opentelemetry.io/docs/concepts/observability-primer) is a quick introduction. Note that tracing can theoretically take place across multiple processes, but we'll only be dealing with exporting data from a single web application here. Source code for a working application can be found [on github](https://github.com/tekul/rust-tracing-otlp).
@@ -230,7 +231,9 @@ This worked immediately! [^lie]:
 
 There's a lot more to tracing and telemetry than what we've covered here, but we've successfully created a setup that should work with different OpenTelemetry providers, without the need to recompile our app. We can easily configure it using standard environment variables (which will hopefully be supported directly by the opentelemetry libraries some day). This gives us local event logging along with exporting of tracing spans to an OpenTelemetry traces endpoint.
 
-One issue I had along the way is that it's not obvious what's going on between the opentelemetry client and the endpoint (who traces the tracers 🙂?). When using `http/proto` I only worked out that I was missing the `/v1/traces` part of the endpoint URI when I swapped the default `reqwest` client with one which dumped the request and response to the console. Then I realised the endpoint was returing a `404` which was being ignored. I haven't worked out if this is possible with gRPC and the `tonic` version, since I didn't have any similar issues.
+One issue I had along the way is that it's not obvious what's going on between the opentelemetry client and the endpoint (who traces the tracers 🙂?). When using `http/proto` I only worked out that I was missing the `/v1/traces` part of the endpoint URI when I swapped the default `reqwest` client with one which dumped the request and response to the console. Then I realised the endpoint was returing a `404` which was being ignored. I haven't worked out if this is possible with gRPC and the `tonic` version, since I didn't have any similar issues (Update: the issue with HTTP errors being silently ignored should now be fixed [^http-fix]).
+
+[^http-fix]: The `0.19` release of `opentelemetry-otlp` now [reports HTTP errors](https://github.com/open-telemetry/opentelemetry-rust/pull/945).
 
 Overall though I'm very pleased with the results and the ecosystem is a pleasure to use, thanks to the many people who have worked hard on the various projects involved to get things to where they are today. Instrumenting your code with Rust tracing is a breeze (particularly using the excellent `instrument` macro) and exporting to OpenTelemetry seems to be the way to go if you want to export your data to the cloud. Both the providers used above are easy to sign up for with no commitment, and their free plans should be adequate for a small app.
 
