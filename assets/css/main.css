@@ -1,7 +1,7 @@
-@import "tailwindcss/base";
-@import "tailwindcss/components";
-@import "tailwindcss/utilities";
-@import "/assets/css/prism.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@import "prism.css";
 
 
 .form-input {
