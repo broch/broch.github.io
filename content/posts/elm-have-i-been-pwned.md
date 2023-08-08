@@ -61,7 +61,7 @@ we can pick the remaining suffix (`214943daad1d64c102faec29de4afe9da3d`) out of 
 
 The first thing we need to be able to do is calculate SHA-1 values. Fortunately, someone has already written an [Elm package which does just that](https://package.elm-lang.org/packages/TSFoster/elm-sha1/latest/).
 
-We write our own `sha1` function to make sure we are always using upper-case Hex values. The API used Hex encoding and thought it isn't case sensitive, the response is always upper-case and we're going to be comparing with those values.
+We write our own `sha1` function to make sure we are always using upper-case Hex values. The API uses Hex encoding and though it isn't case sensitive, the response is always upper-case and we're going to be comparing with those values.
 
 ```elm
 sha1 : String -> String

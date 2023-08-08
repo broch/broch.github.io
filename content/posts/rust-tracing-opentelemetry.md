@@ -25,7 +25,7 @@ to your `main` function. If you are running a web application you can use integr
 
 But you want more than console output, right? Tracing links the various "spans" and log events from a single HTTP request together and we want to see them collected in a dashboard so we can track what happened during each request, query the data and so on. At this point you might read about the [`tracing-opentelemetry`]() and [`opentelemetry`]() crates. The `opentelemetry` crate lists yet more crates which you can use to export traces to various backends. One of these is [Jaeger](https://www.jaegertracing.io/) which is a popular open source tool, with a nice UI. You can easily run it locally using Docker, it's often used in blog articles and many of the code samples on `crates.io` use it.
 
-This is roughly where I was about a year ago. I was working on a system which I'd integrated with Rust `tracing` and copied one of those samples to export to Jaeger using the [`opentelemetry-jaeger`](https://crates.io/crates/opentelemetry-jaeger) crate. But ideally we wanted to provide a binary to users and allow them to choose their own telemetry backend. OpenTelemetry didn't seem to be providing a lot of value if we had to comile against a different integration crate each time 🤔.
+This is roughly where I was about a year ago. I was working on a system which I'd integrated with Rust `tracing` and copied one of those samples to export to Jaeger using the [`opentelemetry-jaeger`](https://crates.io/crates/opentelemetry-jaeger) crate. But ideally we wanted to provide a binary to users and allow them to choose their own telemetry backend. OpenTelemetry didn't seem to be providing a lot of value if we had to compile against a different integration crate each time 🤔.
 
 On revisiting this issue and doing a bit more research, I realised that OpenTelemetry defines [its own protocol](https://opentelemetry.io/docs/reference/specification/protocol/), OTLP (hence the "Open" 🙄), and that it is *directly supported* by Jaeger as well as by many [commercial vendors](https://opentelemetry.io/ecosystem/vendors/). In fact, Jaeger has now deprecated its own clients in favour of OTLP, so the `opentelemetry-jaeger` crate is really redundant.
 
@@ -204,7 +204,7 @@ It also checks `OTEL_EXPORTER_OTLP_ENDPOINT` to see whether it starts with `http
 If we run the app with:
 
 ```
-OTEL_EXPORTER_OTLP_ENDPOINT=https://api.honeycomb.io:443 OTEL_EXPORTER_OTLP_HEADERS="x-honeycomb-team=your-api-key" OTEL_EXPORTER_OTLP=grpc OTEL_SERVICE_NAME=randy RUST_LOG="debug,h2=warn" cargo run
+OTEL_EXPORTER_OTLP_ENDPOINT=https://api.honeycomb.io:443 OTEL_EXPORTER_OTLP_HEADERS="x-honeycomb-team=your-api-key" OTEL_EXPORTER_OTLP_PROTOCOL=grpc OTEL_SERVICE_NAME=randy RUST_LOG="debug,h2=warn" cargo run
 ```
 
 we can finally see our request traces in Honeycomb's dashboard and view individual spans:
