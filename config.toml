@@ -6,6 +6,9 @@ sectionPagesMenu = "main"
 [params]
   description = "Programming (often in Haskell and Elm), identity management, OpenID, security, Linux, other things."
 
+[taxonomies]
+  tag = "tags"
+
 [markup]
   [markup.goldmark]
     [markup.goldmark.renderer]
