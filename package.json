@@ -1,18 +1,17 @@
 {
-  "name": "broch-hugo",
-  "version": "1.0.0",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "comments": {
+    "dependencies": {},
+    "devDependencies": {
+      "@tailwindcss/forms": "github.com/broch/broch-theme",
+      "@tailwindcss/typography": "github.com/broch/broch-theme",
+      "autoprefixer": "github.com/broch/broch-theme",
+      "postcss": "github.com/broch/broch-theme",
+      "postcss-cli": "github.com/broch/broch-theme",
+      "postcss-import": "github.com/broch/broch-theme",
+      "tailwindcss": "github.com/broch/broch-theme"
+    }
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/broch/broch.github.io.git"
-  },
-  "author": "",
-  "bugs": {
-    "url": "https://github.com/broch/broch.github.io/issues"
-  },
-  "homepage": "https://broch.tech",
+  "dependencies": {},
   "devDependencies": {
     "@tailwindcss/forms": "^0.5.3",
     "@tailwindcss/typography": "^0.5.9",
@@ -21,5 +20,7 @@
     "postcss-cli": "^10.1.0",
     "postcss-import": "^14.0.1",
     "tailwindcss": "^3.3.3"
-  }
+  },
+  "name": "broch.github.io",
+  "version": "0.1.0"
 }

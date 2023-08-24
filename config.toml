@@ -4,7 +4,8 @@ title = "broch.tech"
 sectionPagesMenu = "main"
 
 [params]
-  description = "Programming (often in Haskell and Elm), identity management, OpenID, security, Linux, other things."
+  description = "Programming (Rust, Haskell and Elm), identity management, OpenID, security, Linux, other things."
+  blogTitle = "🦥 An often infrequently updated blog"
 
 [taxonomies]
   tag = "tags"
@@ -32,6 +33,9 @@ sectionPagesMenu = "main"
   [[module.mounts]]
     source = "hugo_stats.json"
     target = "assets/watching/hugo_stats.json"
+  [[module.imports]]
+    path = 'github.com/broch/broch-theme'
+
 
 [build]
   writeStats = true

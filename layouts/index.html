@@ -17,7 +17,7 @@
     {{ range first 6 (where .Site.RegularPages "Section" "posts") }}
 
       <div class="flex flex-col border rounded-lg dark:border-neutral-900 shadow-lg dark:shadow-none overflow-hidden hover:shadow-xl">
-        <div class="flex-shrink-0">
+        <div class="flex-shrink-0 bg-stone-200">
         <a href="{{.Permalink}}">
             <img class="h-60 w-full object-cover" src="{{ .Params.thumb }}" alt="{{ .Params.thumb_alt }}">
         </a>
