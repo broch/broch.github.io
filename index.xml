@@ -1,4 +1,183 @@
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>broch.tech</title><link>https://broch.tech/</link><description>Recent content on broch.tech</description><language>en-gb</language><lastBuildDate>Thu, 06 Apr 2023 00:00:00 +0000</lastBuildDate><atom:link href="https://broch.tech/index.xml" rel="self" type="application/rss+xml"/><item><title>Flexible Tracing with Rust and OpenTelemetry OTLP</title><link>https://broch.tech/posts/rust-tracing-opentelemetry/</link><pubDate>Thu, 06 Apr 2023 00:00:00 +0000</pubDate><guid>https://broch.tech/posts/rust-tracing-opentelemetry/</guid><description>&lt;p>If you have been using log files all your life, the telemetry ecosytem can be a bit daunting for a newcomer. And if you&amp;rsquo;ve just discovered Rust&amp;rsquo;s &lt;a href="https://tokio.rs/#tk-lib-tracing">tracing&lt;/a> framework, it&amp;rsquo;s not immediately clear where to look beyond the basic examples. There are a lot of crates and APIs to get your head round and a lot of new terminology. This article isn&amp;rsquo;t intended to be a complete tutorial but will explain how to set up a configuration which works with multiple systems and hopefully provide some insight into how things fit together. For an overview of telemetry, the &lt;a href="https://opentelemetry.io/docs/concepts/observability-primer">OpenTelemetry Observability Primer&lt;/a> is a quick introduction. Note that tracing can theoretically take place across multiple processes, but we&amp;rsquo;ll only be dealing with exporting data from a single web application here. Source code for a working application can be found &lt;a href="https://github.com/tekul/rust-tracing-otlp">on github&lt;/a>.&lt;/p>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>broch.tech</title><link>https://broch.tech/</link><description>Recent content on broch.tech</description><language>en-gb</language><lastBuildDate>Thu, 31 Aug 2023 00:00:00 +0000</lastBuildDate><atom:link href="https://broch.tech/index.xml" rel="self" type="application/rss+xml"/><item><title>Trying out Rust's Async Functions in Traits</title><link>https://broch.tech/posts/rust-async-fn-trait/</link><pubDate>Thu, 31 Aug 2023 00:00:00 +0000</pubDate><guid>https://broch.tech/posts/rust-async-fn-trait/</guid><description>&lt;p>Async functions in traits have been available in Rust nightly releases for some time now behind the feature gate &lt;code>async_fn_in_trait&lt;/code>. The current status is summarized in the &lt;a href="https://blog.rust-lang.org/inside-rust/2023/05/03/stabilizing-async-fn-in-trait.html">Inside Rust blog&lt;/a>. Many of the issues are also explained in more detail by Niko Matsakis in his &lt;a href="https://smallcultfollowing.com/babysteps/">Baby Steps blog&lt;/a>.&lt;/p>
+&lt;p>I decided to try the feature out with some existing code which was using the &lt;a href="https://crates.io/crates/async-trait">&lt;code>async-trait&lt;/code>&lt;/a> library (which provides a workaround for stable Rust).&lt;/p>
+&lt;p>Working code for the example in this article can be found &lt;a href="https://github.com/tekul/rust-async-fn-trait">on Github&lt;/a>.&lt;/p>
+&lt;h2 id="existing-code-using-async-trait-and-actix">Existing code using &lt;code>async-trait&lt;/code> and actix&lt;/h2>
+&lt;p>The code I have is quite complicated but the idea can be reduced to a &lt;code>Database&lt;/code> trait which is used by an actix web handler. There&amp;rsquo;s also an axum version of the application but we&amp;rsquo;ll get to that later. A toy example which models this could be written as follows:&lt;/p>
+&lt;pre>&lt;code class="language-rust">use async_trait::async_trait;
+pub struct Data {
+id: String,
+}
+#[async_trait]
+pub trait Database {
+async fn load_data(&amp;amp;self, id: &amp;amp;str) -&amp;gt; Data;
+}
+struct SillyDatabase {};
+#[async_trait]
+impl Database for SillyDatabase {
+async fn load_data(&amp;amp;self, &amp;amp;str id) -&amp;gt; Data {
+Data { id: id.to_string() }
+}
+}
+&lt;/code>&lt;/pre>
+&lt;p>The actix application has a function to setup the routes which is generic in the &lt;code>Database&lt;/code> type, allowing it to be run with different backend implementations:&lt;/p>
+&lt;pre>&lt;code class="language-rust">use actix_web::{
+web::{self, ServiceConfig},
+App, HttpRequest, HttpResponse, HttpServer,
+};
+pub fn mk_app&amp;lt;B&amp;gt;(backend: B) -&amp;gt; impl FnOnce(&amp;amp;mut ServiceConfig)
+where
+B: Database + 'static,
+{
+move |app| {
+app.app_data(backend).service(web::resource(&amp;quot;/data&amp;quot;).to(get_data::&amp;lt;B&amp;gt;));
+}
+}
+async fn get_data&amp;lt;B&amp;gt;(req: HttpRequest) -&amp;gt; HttpResponse
+where
+B: Database + 'static
+{
+let backend = req
+.app_data::&amp;lt;B&amp;gt;()
+.expect(&amp;quot;app_data should include Database&amp;quot;);
+let Data { id } = backend.load_data(&amp;quot;some_id&amp;quot;).await;
+HttpResponse::Ok().body(format!(&amp;quot;Loaded data, with id {id}&amp;quot;))
+}
+#[tokio::main]
+async fn main() -&amp;gt; io::Result&amp;lt;()&amp;gt; {
+let database = SillyDatabase {};
+let server = HttpServer::new(move || {
+App::new().configure(mk_app(database.clone()))
+})
+.bind(&amp;quot;127.0.0.1:8088&amp;quot;)
+.unwrap();
+server.run().await
+}
+&lt;/code>&lt;/pre>
+&lt;p>Running the app with &lt;code>cargo run&lt;/code> and then sending a GET request to the URL works as expected:&lt;/p>
+&lt;pre>&lt;code class="language-shell">$ curl localhost:8088/data
+Loaded data, with id 'some_id'
+&lt;/code>&lt;/pre>
+&lt;h3 id="without-async-trait">Without &lt;code>async-trait&lt;/code>&lt;/h3>
+&lt;p>Ideally we can just switch to nightly rust, enable the feature, remove the &lt;code>async_trait&lt;/code> macros and it will just work:&lt;/p>
+&lt;pre>&lt;code class="language-rust">#![feature(async_fn_in_trait)]
+trait Database {
+async fn load_data(&amp;amp;self, &amp;amp;str id) -&amp;gt; Data;
+}
+impl Database for SillyDatabase {
+// Same as before...
+}
+&lt;/code>&lt;/pre>
+&lt;p>And indeed it does! We can just run the app as before and we get the same result. Well that was easy. Looks like we can just go ahead and forget about the &lt;code>async-trait&lt;/code> crate already?&lt;/p>
+&lt;h2 id="adding-an-axum-version">Adding an axum version&lt;/h2>
+&lt;p>Not so fast. Let&amp;rsquo;s try doing the same thing with axum. The equivalent code for the server is&lt;/p>
+&lt;pre>&lt;code class="language-rust">use std::net::SocketAddr;
+use async_trait::async_trait;
+use axum::{extract::State, response::IntoResponse, routing::get, Router};
+pub fn mk_app&amp;lt;B&amp;gt;(backend: B) -&amp;gt; Router
+where
+B: Clone + Send + Sync + Database + 'static,
+{
+Router::new()
+.route(&amp;quot;/data&amp;quot;, get(get_data::&amp;lt;B&amp;gt;))
+.with_state(backend)
+}
+async fn get_data&amp;lt;B&amp;gt;(State(backend): State&amp;lt;B&amp;gt;) -&amp;gt; impl IntoResponse
+where
+B: Database,
+{
+let Data { id } = backend.load_data(&amp;quot;some_id&amp;quot;).await;
+format!(&amp;quot;Loaded data, with id {id}&amp;quot;)
+}
+#[tokio::main]
+async fn main() {
+let backend = SillyDatabase {};
+let addr = SocketAddr::from(([0, 0, 0, 0, 0, 0, 0, 0], 8088));
+axum_server::bind(addr)
+.serve(mk_app(backend).into_make_service())
+.await
+.expect(&amp;quot;server error&amp;quot;);
+}
+&lt;/code>&lt;/pre>
+&lt;p>This also works with the &lt;code>async-trait&lt;/code> version of our &lt;code>Database&lt;/code> trait. But what happens if we switch to using &lt;code>async_fn_in_trait&lt;/code> again:&lt;/p>
+&lt;pre>&lt;code>error[E0277]: the trait bound `fn(State&amp;lt;B&amp;gt;) -&amp;gt; impl Future&amp;lt;Output = impl IntoResponse&amp;gt; {get_data::&amp;lt;B&amp;gt;}: Handler&amp;lt;_, _, _&amp;gt;` is not satisfied
+--&amp;gt; src/bin/axum.rs:28:29
+|
+28 | .route(&amp;quot;/data&amp;quot;, get(get_data::&amp;lt;B&amp;gt;))
+| --- ^^^^^^^^^^^^^ the trait `Handler&amp;lt;_, _, _&amp;gt;` is not implemented for fn item `fn(State&amp;lt;B&amp;gt;) -&amp;gt; impl Future&amp;lt;Output = impl IntoResponse&amp;gt; {get_data::&amp;lt;B&amp;gt;}`
+| |
+| required by a bound introduced by this call
+|
+= note: Consider using `#[axum::debug_handler]` to improve the error message
+= help: the following other types implement trait `Handler&amp;lt;T, S, B&amp;gt;`:
+&amp;lt;Layered&amp;lt;L, H, T, S, B, B2&amp;gt; as Handler&amp;lt;T, S, B2&amp;gt;&amp;gt;
+&amp;lt;MethodRouter&amp;lt;S, B&amp;gt; as Handler&amp;lt;(), S, B&amp;gt;&amp;gt;
+note: required by a bound in `axum::routing::get`
+&lt;/code>&lt;/pre>
+&lt;p>Oops, it doesn&amp;rsquo;t work! This opaque error message is common with axum and means that our function needs to implement &lt;code>Handler&lt;/code> but doesn&amp;rsquo;t. Axum defines Handler implementations for lots of things and we don&amp;rsquo;t usually have to worry about it, but for some reason our function no longer satisfies the requirements even though it did before and we haven&amp;rsquo;t changed the function directly. If we try to follow the advice to use the &lt;code>axum::debug_handler&lt;/code> macro we will get an additional error message:&lt;/p>
+&lt;pre>&lt;code>error: `#[axum_macros::debug_handler]` doesn't support generic functions
+--&amp;gt; src/bin/axum.rs:33:18
+|
+33 | async fn get_data&amp;lt;B&amp;gt;(State(backend): State&amp;lt;B&amp;gt;) -&amp;gt; impl IntoResponse
+| ^^^
+&lt;/code>&lt;/pre>
+&lt;p>So that is no help either. If we remove the generic handler and just use &lt;code>SillyDatabase&lt;/code> directly, the problem goes away. But that&amp;rsquo;s not what we want. The real code is written to be generic because the router it creates is part of a library and using a trait means users can configure it with whatever backend they want. So why isn&amp;rsquo;t it working any more?&lt;/p>
+&lt;h2 id="the-send-bound-problem">The &lt;code>Send&lt;/code> bound problem&lt;/h2>
+&lt;p>Fortunately I&amp;rsquo;d been reading the blogs I mentioned at the start of this post and the related issues in github and there&amp;rsquo;s a lot of discussion about how to make the futures returned by the &lt;code>async&lt;/code> functions in traits implement &lt;code>Send&lt;/code> &lt;sup id="fnref:1">&lt;a href="#fn:1" class="footnote-ref" role="doc-noteref">1&lt;/a>&lt;/sup>. This is a common requirement when using Tokio&amp;rsquo;s multi-threaded runtime which can move tasks about between threads, and this is why it is also a requirement for Axum. In fact, if we look at the section called &lt;a href="https://docs.rs/axum/0.6.20/axum/handler/index.html#debugging-handler-type-errors">Debugging handler type errors&lt;/a> the last point is that a handler function must:&lt;/p>
+&lt;blockquote>
+&lt;p>Return a future that is Send. The most common way to accidentally make a future !Send is to hold a !Send type across an await.&lt;/p>
+&lt;/blockquote>
+&lt;p>When we used &lt;code>async-trait&lt;/code>, it automatically adds the &lt;code>Send&lt;/code> bound to the function in both the trait and the implementation by default. So the &lt;code>Database&lt;/code> trait&amp;rsquo;s &lt;code>load_data&lt;/code> function is guaranteed to return a future that is &lt;code>Send&lt;/code>. We can check this by changing the &lt;code>async_trait macro&lt;/code> usage to &lt;code>#[async_trait(?Send)]&lt;/code> which no longer adds the &lt;code>Send&lt;/code> bound. This gives us the same &lt;code>Handler&lt;/code> error that we see above.&lt;/p>
+&lt;p>When we switch to using &lt;code>async_fn_in_trait&lt;/code> it is no longer the default to assume that the returned future must be &lt;code>Send&lt;/code>. In our code the &lt;code>get_data&lt;/code> handler is awaiting a future returned by the &lt;code>load_data&lt;/code> method and thus we get the error since the future is not guaranteed to be &lt;code>Send&lt;/code>.&lt;/p>
+&lt;h3 id="using-the-return_type_notation-feature">Using the &lt;code>return_type_notation&lt;/code> feature&lt;/h3>
+&lt;p>So is there a way for our &lt;code>get_data&lt;/code> handler to say that it only supports &lt;code>Database&lt;/code> implementations which return a &lt;code>Send&lt;/code> future? It turns out there is if we use the bleeding edge &lt;code>return_type_notation&lt;/code> feature &lt;sup id="fnref:2">&lt;a href="#fn:2" class="footnote-ref" role="doc-noteref">2&lt;/a>&lt;/sup>. If we add the feature then change our &lt;code>mk_app&lt;/code> function to use it:&lt;/p>
+&lt;pre>&lt;code class="language-rust">#![feature(async_fn_in_trait, return_type_notation)]
+...
+pub fn mk_app&amp;lt;B&amp;gt;(backend: B) -&amp;gt; Router
+where
+B: Clone + Send + Sync + Database&amp;lt;load_data(): Send&amp;gt; + 'static,
+{
+...
+}
+&lt;/code>&lt;/pre>
+&lt;p>this should fix the problem. Unfortunately we then get another error (ignoring a warning about using incomplete features):&lt;/p>
+&lt;pre>&lt;code>error[E0277]: `impl Future&amp;lt;Output = Data&amp;gt;` cannot be sent between threads safely
+--&amp;gt; src/bin/axum.rs:46:23
+|
+46 | .serve(mk_app(backend).into_make_service())
+| ------ ^^^^^^^ `impl Future&amp;lt;Output = Data&amp;gt;` cannot be sent between threads safely
+| |
+| required by a bound introduced by this call
+&lt;/code>&lt;/pre>
+&lt;p>This is still complaining that our future is &lt;code>!Send&lt;/code> even though the compiler knows that &lt;code>backend&lt;/code> is a &lt;code>SillyDatabase&lt;/code> at this point, which should be fine. Fortunately someone else had already run into the same problem &lt;sup id="fnref:3">&lt;a href="#fn:3" class="footnote-ref" role="doc-noteref">3&lt;/a>&lt;/sup>. If we use &amp;ldquo;turbofish&amp;rdquo; syntax to explicitly tell &lt;code>mk_app&lt;/code> what type we&amp;rsquo;re using:&lt;/p>
+&lt;pre>&lt;code class="language-rust"> axum_server::bind(addr)
+.serve(mk_app::&amp;lt;SillyDatabase&amp;gt;(backend).into_make_service())
+.await
+.expect(&amp;quot;server error&amp;quot;);
+&lt;/code>&lt;/pre>
+&lt;p>Then our code finally compiles.&lt;/p>
+&lt;h3 id="what-about-actix">What about Actix?&lt;/h3>
+&lt;p>Actix works without any issues though which is a bit confusing since it uses the same &lt;code>#[tokio::main]&lt;/code> macro. In the past Actix had its own runtime implementation, which used multiple single-threaded Tokio runtimes and did not need futures to be &lt;code>Send&lt;/code>. Under the hood, they have retained that approach in their current architecture, so this explains why we don&amp;rsquo;t have the kind of problems we get with Axum, which uses Tokio in a more standard way &lt;sup id="fnref:4">&lt;a href="#fn:4" class="footnote-ref" role="doc-noteref">4&lt;/a>&lt;/sup>.&lt;/p>
+&lt;h2 id="conclusion">Conclusion&lt;/h2>
+&lt;p>What at first seems to be a simple enough idea, can turn out to be, well, not so simple. This has been obvious to the people implementing async Rust for a while but it&amp;rsquo;s less obvious if you&amp;rsquo;re just writing code like me.&lt;/p>
+&lt;p>So far, I haven&amp;rsquo;t had a use case where I don&amp;rsquo;t want to require the &lt;code>Send&lt;/code> bound at the trait level, but may want to require it for a specific implementation (which is what the &lt;code>return_type_notation&lt;/code> achieves). It makes sense that there might be cases where this is desirable in a general purpose library.&lt;/p>
+&lt;p>Hopefully in a future Rust version it will be just as easy to turn the &lt;code>Send&lt;/code> bound on or off for our trait methods as it is with &lt;code>async-trait&lt;/code>. For now though, sticking with the &lt;code>async-trait&lt;/code> macros is still the simplest option.&lt;/p>
+&lt;div class="footnotes" role="doc-endnotes">
+&lt;hr>
+&lt;ol>
+&lt;li id="fn:1">
+&lt;p>A good example is the article &lt;a href="https://smallcultfollowing.com/babysteps/blog/2023/02/01/async-trait-send-bounds-part-1-intro/">Async trait send bounds, part 1&lt;/a> by Niko Matsakis.&amp;#160;&lt;a href="#fnref:1" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&lt;/p>
+&lt;/li>
+&lt;li id="fn:2">
+&lt;p>This is also covered in &lt;a href="https://smallcultfollowing.com/babysteps/blog/2023/02/13/return-type-notation-send-bounds-part-2/">Return type notation (send bounds, part 2)&lt;/a>. Note that using it currently breaks things like Rust &lt;code>tracing&lt;/code> macros.&amp;#160;&lt;a href="#fnref:2" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&lt;/p>
+&lt;/li>
+&lt;li id="fn:3">
+&lt;p>Fortunate for me at any rate. This &lt;a href="https://github.com/rust-lang/rust/issues/114142">Github issue&lt;/a> describes the same problem and someone helpfully provided a workaround.&amp;#160;&lt;a href="#fnref:3" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&lt;/p>
+&lt;/li>
+&lt;li id="fn:4">
+&lt;p>See the discussion in this &lt;a href="https://www.reddit.com/r/rust/comments/t1bim5/announcing_actix_web_v40/">actix web 4 release&lt;/a> announcement, for example (or read the code 🙂).&amp;#160;&lt;a href="#fnref:4" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&lt;/p>
+&lt;/li>
+&lt;/ol>
+&lt;/div></description></item><item><title>Flexible Tracing with Rust and OpenTelemetry OTLP</title><link>https://broch.tech/posts/rust-tracing-opentelemetry/</link><pubDate>Thu, 06 Apr 2023 00:00:00 +0000</pubDate><guid>https://broch.tech/posts/rust-tracing-opentelemetry/</guid><description>&lt;p>If you have been using log files all your life, the telemetry ecosytem can be a bit daunting for a newcomer. And if you&amp;rsquo;ve just discovered Rust&amp;rsquo;s &lt;a href="https://tokio.rs/#tk-lib-tracing">tracing&lt;/a> framework, it&amp;rsquo;s not immediately clear where to look beyond the basic examples. There are a lot of crates and APIs to get your head round and a lot of new terminology. This article isn&amp;rsquo;t intended to be a complete tutorial but will explain how to set up a configuration which works with multiple systems and hopefully provide some insight into how things fit together. For an overview of telemetry, the &lt;a href="https://opentelemetry.io/docs/concepts/observability-primer">OpenTelemetry Observability Primer&lt;/a> is a quick introduction. Note that tracing can theoretically take place across multiple processes, but we&amp;rsquo;ll only be dealing with exporting data from a single web application here. Source code for a working application can be found &lt;a href="https://github.com/tekul/rust-tracing-otlp">on github&lt;/a>.&lt;/p>
 &lt;h2 id="the-rust-tracing-and-telemetry-ecosystem">The Rust tracing and telemetry ecosystem&lt;/h2>
 &lt;p>Rust has its own &lt;a href="https://crates.io/crates/tracing">tracing framework&lt;/a>. Getting started with some logging to &lt;code>stdout&lt;/code> is easy. You can just add:&lt;/p>
 &lt;pre>&lt;code class="language-rust">tracing_subscriber::fmt().init();
@@ -14,15 +193,16 @@
 &lt;ul>
 &lt;li>&lt;code>tracing&lt;/code> &amp;ndash; to instrument our Rust code.&lt;/li>
 &lt;li>&lt;code>tracing-subscriber&lt;/code> &amp;ndash; allows us to listen for tracing events and define how they are filtered and exported.&lt;/li>
-&lt;li>&lt;code>opentelemetry&lt;/code> &amp;ndash; OpenTelemetry&amp;rsquo;s view of tracing, spans, etc.&lt;/li>
+&lt;li>&lt;code>opentelemetry&lt;/code> &amp;ndash; OpenTelemetry&amp;rsquo;s API-level view of tracing, spans, etc.&lt;/li>
+&lt;li>&lt;code>opentelemetry_sdk&lt;/code> &amp;ndash; Implements the OpenTelemetry APIs &lt;sup id="fnref:2">&lt;a href="#fn:2" class="footnote-ref" role="doc-noteref">2&lt;/a>&lt;/sup>.&lt;/li>
 &lt;li>&lt;code>tracing-opentelemetry&lt;/code> &amp;ndash; provides a compatibility layer between the two.&lt;/li>
 &lt;li>&lt;code>opentelemetry-otlp&lt;/code> &amp;ndash; the protocol implementation to export data to Jaeger or some other backend.&lt;/li>
 &lt;/ul>
-&lt;p>The &lt;code>tracing-subscriber&lt;/code> crate also helpfully processes messages generated by code using the &lt;code>log&lt;/code> crate &lt;sup id="fnref:2">&lt;a href="#fn:2" class="footnote-ref" role="doc-noteref">2&lt;/a>&lt;/sup>, converting them to tracing events. This is useful if you&amp;rsquo;re using a library such as &lt;code>tokio-postgres&lt;/code> and want to see the interactions with the database during a request.&lt;/p>
+&lt;p>The &lt;code>tracing-subscriber&lt;/code> crate also helpfully processes messages generated by code using the &lt;code>log&lt;/code> crate &lt;sup id="fnref:3">&lt;a href="#fn:3" class="footnote-ref" role="doc-noteref">3&lt;/a>&lt;/sup>, converting them to tracing events. This is useful if you&amp;rsquo;re using a library such as &lt;code>tokio-postgres&lt;/code> and want to see the interactions with the database during a request.&lt;/p>
 &lt;p>Some of these crates are maintained by the tokio tracing team and some are part of the OpenTelemetry organization. It&amp;rsquo;s important that the versions are compatible or you can get errors as everything is still quite unstable. Some of the code also requires specific crate features to be enabled. The &lt;code>Cargo.toml&lt;/code> file from the &lt;a href="https://github.com/tekul/rust-tracing-otlp">example code&lt;/a> can be used as a starting point.&lt;/p>
 &lt;h2 id="basic-tracing-setup">Basic Tracing Setup&lt;/h2>
 &lt;p>Rust tracing allows us to instrument our code to generate spans and events. We then need to define at least one &lt;a href="https://docs.rs/tracing-core/0.1.30/tracing_core/subscriber/trait.Subscriber.html">&lt;code>Subscriber&lt;/code>&lt;/a> to capture and log these events somewhere. The code &lt;code>tracing_subscriber::fmt().init();&lt;/code> creates a simple subscriber which, by default, writes timestamped output to the console similar to a traditional log.
-This is roughly equivalent to &lt;sup id="fnref:3">&lt;a href="#fn:3" class="footnote-ref" role="doc-noteref">3&lt;/a>&lt;/sup>:&lt;/p>
+This is roughly equivalent to &lt;sup id="fnref:4">&lt;a href="#fn:4" class="footnote-ref" role="doc-noteref">4&lt;/a>&lt;/sup>:&lt;/p>
 &lt;pre>&lt;code class="language-rust">use tracing_subscriber::prelude::*;
 let fmt_layer = tracing_subscriber::fmt::layer();
 tracing_subscriber::registry().with(fmt_layer).init();
@@ -33,7 +213,7 @@ tracing_subscriber::registry().with(fmt_layer).init();
 .with(tracing_subscriber::EnvFilter::from_default_env())
 .init();
 &lt;/code>&lt;/pre>
-&lt;p>This will filter the output based on the value of the environment variable &lt;code>RUST_LOG&lt;/code> &lt;sup id="fnref:4">&lt;a href="#fn:4" class="footnote-ref" role="doc-noteref">4&lt;/a>&lt;/sup>.&lt;/p>
+&lt;p>This will filter the output based on the value of the environment variable &lt;code>RUST_LOG&lt;/code> &lt;sup id="fnref:5">&lt;a href="#fn:5" class="footnote-ref" role="doc-noteref">5&lt;/a>&lt;/sup>.&lt;/p>
 &lt;p>Now try running the sample application:&lt;/p>
 &lt;pre>&lt;code class="language-shell">$ RUST_LOG=&amp;quot;info&amp;quot; cargo run
 &lt;/code>&lt;/pre>
@@ -45,7 +225,7 @@ tracing_subscriber::registry().with(fmt_layer).init();
 &lt;pre>&lt;code class="language-shell">$ curl localhost:8080/rand
 Hello. Your random number is 7789005614985398892.
 &lt;/code>&lt;/pre>
-&lt;p>But we don&amp;rsquo;t see anything in the server log 🤔. Why doesn&amp;rsquo;t our request span appear? This is part of the way the &lt;code>fmt&lt;/code> subscriber works. It logs the events in our code (where we have &lt;code>debug&lt;/code>, &lt;code>trace&lt;/code> etc), but doesn&amp;rsquo;t log spans by default &lt;sup id="fnref:5">&lt;a href="#fn:5" class="footnote-ref" role="doc-noteref">5&lt;/a>&lt;/sup>. If we enable debug level logging then we will see output during our request, since we have debug statements in the request handler:&lt;/p>
+&lt;p>But we don&amp;rsquo;t see anything in the server log 🤔. Why doesn&amp;rsquo;t our request span appear? This is part of the way the &lt;code>fmt&lt;/code> subscriber works. It logs the events in our code (where we have &lt;code>debug&lt;/code>, &lt;code>trace&lt;/code> etc), but doesn&amp;rsquo;t log spans by default &lt;sup id="fnref:6">&lt;a href="#fn:6" class="footnote-ref" role="doc-noteref">6&lt;/a>&lt;/sup>. If we enable debug level logging then we will see output during our request, since we have debug statements in the request handler:&lt;/p>
 &lt;pre>&lt;code class="language-shell">$ RUST_LOG=&amp;quot;debug,h2=warn&amp;quot; cargo run
 ...
 2023-04-03T12:50:27.485688Z INFO rust_tracing_otlp: Starting server
@@ -56,8 +236,13 @@ Hello. Your random number is 7789005614985398892.
 &lt;/code>&lt;/pre>
 &lt;p>The additional attributes added by &lt;code>tracing-actix-web&lt;/code> are also visible with each log message. This is still unstructured logging though. Events are logged individually and events from different requests may be interleaved.&lt;/p>
 &lt;h2 id="adding-opentelemetry-to-the-mix">Adding OpenTelemetry to the mix&lt;/h2>
-&lt;p>As a first step towards using OpenTelemetry, we can swap the &lt;code>fmt&lt;/code> layer for an &lt;code>opentelemetry&lt;/code> &lt;code>stdout&lt;/code> &amp;ldquo;tracer&amp;rdquo;. We then use &lt;code>tracing_opentelemetry&lt;/code> to convert it to a layer compatible with our previous code:&lt;/p>
-&lt;pre>&lt;code class="language-rust">let tracer = opentelemetry::sdk::export::trace::stdout::new_pipeline().install_simple();
+&lt;p>As a first step towards using OpenTelemetry, we can swap the &lt;code>fmt&lt;/code> layer for an &lt;code>opentelemetry&lt;/code> &lt;code>stdout&lt;/code> &amp;ldquo;tracer&amp;rdquo; (update: this now also requires the &lt;code>opentelemetry_stdout&lt;/code> crate). We then use &lt;code>tracing_opentelemetry&lt;/code> to convert it to a layer compatible with our previous code:&lt;/p>
+&lt;pre>&lt;code class="language-rust">use opentelemetry_sdk::trace::TracerProvider;
+use opentelemetry::trace::TracerProvider as _;
+let provider = TracerProvider::builder()
+.with_simple_exporter(opentelemetry_stdout::SpanExporter::default())
+.build();
+let tracer = provider.tracer(&amp;quot;randy&amp;quot;);
 let telemetry_layer = tracing_opentelemetry::layer().with_tracer(tracer);
 tracing_subscriber::registry()
 .with(tracing_subscriber::EnvFilter::from_default_env())
@@ -72,7 +257,7 @@ tracing_subscriber::registry()
 let tracer = opentelemetry_otlp::new_pipeline()
 .tracing()
 .with_exporter(opentelemetry_otlp::new_exporter().tonic())
-.install_batch(opentelemetry::runtime::Tokio)
+.install_batch(opentelemetry_sdk::runtime::Tokio)
 .expect(&amp;quot;Couldn't create OTLP tracer&amp;quot;);
 let telemetry_layer = tracing_opentelemetry::layer().with_tracer(tracer);
 tracing_subscriber::registry()
@@ -82,7 +267,10 @@ tracing_subscriber::registry()
 .init();
 &lt;/code>&lt;/pre>
 &lt;p>We&amp;rsquo;ve added &lt;code>fmt_layer&lt;/code> back in here, so that we get console logging to compare with what we see in Jaeger. We&amp;rsquo;re also using a batch exporter which exports data periodically and is recommended for performance. Apart from that everything is the same.&lt;/p>
-&lt;p>Now pull the docker image for &lt;code>jaeger/all-in-one:latest&lt;/code> and run the Jaeger server:&lt;/p>
+&lt;p>Now pull the docker image for Jaeger:&lt;/p>
+&lt;pre>&lt;code>$ docker pull jaegertracing/all-in-one:latest
+&lt;/code>&lt;/pre>
+&lt;p>And run the Jaeger server:&lt;/p>
 &lt;pre>&lt;code>$ docker run -d --name jaeger -e COLLECTOR_OTLP_ENABLED=true -p 16686:16686 -p 4317:4317 -p 4318:4318 jaegertracing/all-in-one:latest
 &lt;/code>&lt;/pre>
 &lt;p>You can then view the UI by browsing to &lt;code>http://localhost:16686&lt;/code>. Ports 4317 and 4318 are used for OTLP over gRPC and HTTP respectively. The &lt;code>tonic&lt;/code> exporter we&amp;rsquo;ve configured means we are using gRPC here.&lt;/p>
@@ -100,16 +288,14 @@ tracing_subscriber::registry()
 &lt;pre>&lt;code>OTEL_EXPORTER_OTLP_ENDPOINT=api.honeycomb.io:443
 OTEL_EXPORTER_OTLP_HEADERS=&amp;quot;x-honeycomb-team=your-api-key&amp;quot;
 &lt;/code>&lt;/pre>
-&lt;p>This endpoint will cause an &amp;ldquo;invalid URI&amp;rdquo; error unless we prefix it with &amp;ldquo;https://&amp;rdquo; so that&amp;rsquo;s the first thing we need to change. Also, the variable &lt;code>OTEL_EXPORTER_OTLP_HEADERS&lt;/code> isn&amp;rsquo;t recognised by Rust opentelemetry, so we have to parse that ourselves for now &lt;sup id="fnref:6">&lt;a href="#fn:6" class="footnote-ref" role="doc-noteref">6&lt;/a>&lt;/sup>. We also need to tell tonic that we want to use TLS &lt;sup id="fnref:7">&lt;a href="#fn:7" class="footnote-ref" role="doc-noteref">7&lt;/a>&lt;/sup>. The code for the exporter would look something like this (note that &lt;code>parse_metadata_from_env&lt;/code> doesn&amp;rsquo;t actually exist in the code):&lt;/p>
+&lt;p>This endpoint will cause an &amp;ldquo;invalid URI&amp;rdquo; error unless we prefix it with &amp;ldquo;https://&amp;rdquo; so that&amp;rsquo;s the first thing we need to change. Also, the variable &lt;code>OTEL_EXPORTER_OTLP_HEADERS&lt;/code> isn&amp;rsquo;t recognised by Rust opentelemetry, so we have to parse that ourselves for now &lt;sup id="fnref:7">&lt;a href="#fn:7" class="footnote-ref" role="doc-noteref">7&lt;/a>&lt;/sup>. We also need to tell tonic that we want to use TLS &lt;sup id="fnref:8">&lt;a href="#fn:8" class="footnote-ref" role="doc-noteref">8&lt;/a>&lt;/sup>. The code for the exporter would look something like this (note that &lt;code>parse_metadata_from_env&lt;/code> doesn&amp;rsquo;t actually exist in the code):&lt;/p>
 &lt;pre>&lt;code class="language-rust">let exporter = opentelemetry_otlp::new_exporter()
 .tonic()
 .with_metadata(parse_metadata_from_env())
-.with_tls_config(Default::default())
-.with_env();
+.with_tls_config(Default::default());
 &lt;/code>&lt;/pre>
-&lt;p>&lt;a href="https://docs.rs/opentelemetry-otlp/0.12.0/opentelemetry_otlp/trait.WithExportConfig.html#tymethod.with_env">&lt;code>with_env&lt;/code>&lt;/a> configures it from the environment variables that is does support.&lt;/p>
 &lt;p>For maximum flexibility we might also want to be able to use the &lt;code>http/protobuf&lt;/code> protocol rather than being restricted to gRPC. So the final version of the example code reads the value of the &lt;a href="https://opentelemetry.io/docs/reference/specification/protocol/exporter/#specify-protocol">&lt;code>OTEL_EXPORTER_OTLP_PROTOCOL&lt;/code>&lt;/a> environment variable to decide what to use (it defaults to &amp;ldquo;grpc&amp;rdquo; if it&amp;rsquo;s not set).
-It also checks &lt;code>OTEL_EXPORTER_OTLP_ENDPOINT&lt;/code> to see whether it starts with &lt;code>https&lt;/code>, before deciding whether to enable TLS for the grpc/tonic exporter. That way we can still use it locally with Jaeger, for example &lt;sup id="fnref:8">&lt;a href="#fn:8" class="footnote-ref" role="doc-noteref">8&lt;/a>&lt;/sup>.&lt;/p>
+It also checks &lt;code>OTEL_EXPORTER_OTLP_ENDPOINT&lt;/code> to see whether it starts with &lt;code>https&lt;/code>, before deciding whether to enable TLS for the grpc/tonic exporter. That way we can still use it locally with Jaeger, for example &lt;sup id="fnref:9">&lt;a href="#fn:9" class="footnote-ref" role="doc-noteref">9&lt;/a>&lt;/sup>.&lt;/p>
 &lt;p>If we run the app with:&lt;/p>
 &lt;pre>&lt;code>OTEL_EXPORTER_OTLP_ENDPOINT=https://api.honeycomb.io:443 OTEL_EXPORTER_OTLP_HEADERS=&amp;quot;x-honeycomb-team=your-api-key&amp;quot; OTEL_EXPORTER_OTLP_PROTOCOL=grpc OTEL_SERVICE_NAME=randy RUST_LOG=&amp;quot;debug,h2=warn&amp;quot; cargo run
 &lt;/code>&lt;/pre>
@@ -120,11 +306,11 @@ It also checks &lt;code>OTEL_EXPORTER_OTLP_ENDPOINT&lt;/code> to see whether it 
 &lt;p>Just to check, I signed up for another free provider, Aspecto, and changed the endpoint and headers:&lt;/p>
 &lt;pre>&lt;code>OTEL_EXPORTER_OTLP_ENDPOINT=https://otelcol.aspecto.io:4317 OTEL_EXPORTER_OTLP_HEADERS=&amp;quot;Authorization=your-api-key&amp;quot; OTEL_SERVICE_NAME=randy RUST_LOG=&amp;quot;debug,h2=warn&amp;quot; cargo run
 &lt;/code>&lt;/pre>
-&lt;p>This worked immediately! &lt;sup id="fnref:9">&lt;a href="#fn:9" class="footnote-ref" role="doc-noteref">9&lt;/a>&lt;/sup>:&lt;/p>
+&lt;p>This worked immediately! &lt;sup id="fnref:10">&lt;a href="#fn:10" class="footnote-ref" role="doc-noteref">10&lt;/a>&lt;/sup>:&lt;/p>
 &lt;p>&lt;img src="aspecto-rand.webp" alt="/rand request trace in Aspecto">&lt;/p>
 &lt;h2 id="conclusion">Conclusion&lt;/h2>
 &lt;p>There&amp;rsquo;s a lot more to tracing and telemetry than what we&amp;rsquo;ve covered here, but we&amp;rsquo;ve successfully created a setup that should work with different OpenTelemetry providers, without the need to recompile our app. We can easily configure it using standard environment variables (which will hopefully be supported directly by the opentelemetry libraries some day). This gives us local event logging along with exporting of tracing spans to an OpenTelemetry traces endpoint.&lt;/p>
-&lt;p>One issue I had along the way is that it&amp;rsquo;s not obvious what&amp;rsquo;s going on between the opentelemetry client and the endpoint (who traces the tracers 🙂?). When using &lt;code>http/proto&lt;/code> I only worked out that I was missing the &lt;code>/v1/traces&lt;/code> part of the endpoint URI when I swapped the default &lt;code>reqwest&lt;/code> client with one which dumped the request and response to the console. Then I realised the endpoint was returing a &lt;code>404&lt;/code> which was being ignored. I haven&amp;rsquo;t worked out if this is possible with gRPC and the &lt;code>tonic&lt;/code> version, since I didn&amp;rsquo;t have any similar issues (Update: the issue with HTTP errors being silently ignored should now be fixed &lt;sup id="fnref:10">&lt;a href="#fn:10" class="footnote-ref" role="doc-noteref">10&lt;/a>&lt;/sup>).&lt;/p>
+&lt;p>One issue I had along the way is that it&amp;rsquo;s not obvious what&amp;rsquo;s going on between the opentelemetry client and the endpoint (who traces the tracers 🙂?). When using &lt;code>http/proto&lt;/code> I only worked out that I was missing the &lt;code>/v1/traces&lt;/code> part of the endpoint URI when I swapped the default &lt;code>reqwest&lt;/code> client with one which dumped the request and response to the console. Then I realised the endpoint was returing a &lt;code>404&lt;/code> which was being ignored. I haven&amp;rsquo;t worked out if this is possible with gRPC and the &lt;code>tonic&lt;/code> version, since I didn&amp;rsquo;t have any similar issues (Update: the issue with HTTP errors being silently ignored should now be fixed &lt;sup id="fnref:11">&lt;a href="#fn:11" class="footnote-ref" role="doc-noteref">11&lt;/a>&lt;/sup>).&lt;/p>
 &lt;p>Overall though I&amp;rsquo;m very pleased with the results and the ecosystem is a pleasure to use, thanks to the many people who have worked hard on the various projects involved to get things to where they are today. Instrumenting your code with Rust tracing is a breeze (particularly using the excellent &lt;code>instrument&lt;/code> macro) and exporting to OpenTelemetry seems to be the way to go if you want to export your data to the cloud. Both the providers used above are easy to sign up for with no commitment, and their free plans should be adequate for a small app.&lt;/p>
 &lt;div class="footnotes" role="doc-endnotes">
 &lt;hr>
@@ -133,31 +319,34 @@ It also checks &lt;code>OTEL_EXPORTER_OTLP_ENDPOINT&lt;/code> to see whether it 
 &lt;p>The example app code is a web application using actix, so the root spans we export are created by the &lt;code>tracing-actix-web&lt;/code> middleware.&amp;#160;&lt;a href="#fnref:1" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&lt;/p>
 &lt;/li>
 &lt;li id="fn:2">
-&lt;p>It defines the &lt;code>tracing-log&lt;/code> crate as an &lt;a href="https://doc.rust-lang.org/cargo/reference/features.html#optional-dependencies">optional dependency&lt;/a> but it is enabled by default. This confused me a bit to start with because I found references to this feature flag and didn&amp;rsquo;t know that optional dependencies implicitly define features for a crate in Rust.&amp;#160;&lt;a href="#fnref:2" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&lt;/p>
+&lt;p>The SDK crate was not required in earlier versions of this article, since the functionality was directly available via the &lt;code>opentelemetry&lt;/code> crate itself.&amp;#160;&lt;a href="#fnref:2" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&lt;/p>
 &lt;/li>
 &lt;li id="fn:3">
-&lt;p>The &lt;code>tracing_subscriber::prelude::*&lt;/code> import adds in extension traits which provide the &lt;code>with&lt;/code> and &lt;code>init&lt;/code> &lt;code>Subscriber&lt;/code> methods used here. We&amp;rsquo;ll assume this is used in further code snippets.&amp;#160;&lt;a href="#fnref:3" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&lt;/p>
+&lt;p>It defines the &lt;code>tracing-log&lt;/code> crate as an &lt;a href="https://doc.rust-lang.org/cargo/reference/features.html#optional-dependencies">optional dependency&lt;/a> but it is enabled by default. This confused me a bit to start with because I found references to this feature flag and didn&amp;rsquo;t know that optional dependencies implicitly define features for a crate in Rust.&amp;#160;&lt;a href="#fnref:3" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&lt;/p>
 &lt;/li>
 &lt;li id="fn:4">
-&lt;p>For example, you might set &lt;code>RUST_LOG='debug,h2=warn&lt;/code> which will output debug level events but suppress anything below warn level from the &lt;code>h2&lt;/code> crate which generates a lot of low-level messages which might drown out those from your application.&amp;#160;&lt;a href="#fnref:4" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&lt;/p>
+&lt;p>The &lt;code>tracing_subscriber::prelude::*&lt;/code> import adds in extension traits which provide the &lt;code>with&lt;/code> and &lt;code>init&lt;/code> &lt;code>Subscriber&lt;/code> methods used here. We&amp;rsquo;ll assume this is used in further code snippets.&amp;#160;&lt;a href="#fnref:4" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&lt;/p>
 &lt;/li>
 &lt;li id="fn:5">
-&lt;p>You can change this behaviour by calling the &lt;a href="https://docs.rs/tracing-subscriber/latest/tracing_subscriber/fmt/struct.Layer.html#method.with_span_events">with_span_events&lt;/a> method when creating the subscriber.&amp;#160;&lt;a href="#fnref:5" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&lt;/p>
+&lt;p>For example, you might set &lt;code>RUST_LOG='debug,h2=warn&lt;/code> which will output debug level events but suppress anything below warn level from the &lt;code>h2&lt;/code> crate which generates a lot of low-level messages which might drown out those from your application.&amp;#160;&lt;a href="#fnref:5" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&lt;/p>
 &lt;/li>
 &lt;li id="fn:6">
-&lt;p>There is &lt;a href="https://github.com/open-telemetry/opentelemetry-rust/issues/984">an issue open to support more variables&lt;/a>.&amp;#160;&lt;a href="#fnref:6" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&lt;/p>
+&lt;p>You can change this behaviour by calling the &lt;a href="https://docs.rs/tracing-subscriber/latest/tracing_subscriber/fmt/struct.Layer.html#method.with_span_events">with_span_events&lt;/a> method when creating the subscriber.&amp;#160;&lt;a href="#fnref:6" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&lt;/p>
 &lt;/li>
 &lt;li id="fn:7">
-&lt;p>The &lt;code>tls&lt;/code> and &lt;code>tls-roots&lt;/code> features need to be enabled on the tonic crate in order to create a connection and validate the server certificate.&amp;#160;&lt;a href="#fnref:7" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&lt;/p>
+&lt;p>A fix for this &lt;a href="https://github.com/open-telemetry/opentelemetry-rust/pull/1377">has been merged&lt;/a> and is listed in the changelog for &lt;code>opentelemetry-otlp&lt;/code> version &lt;code>0.14.0&lt;/code>. However this seems to be a mistake as the change is still not in the tonic exporter in this version.&amp;#160;&lt;a href="#fnref:7" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&lt;/p>
 &lt;/li>
 &lt;li id="fn:8">
-&lt;p>Note that you might run into &lt;a href="https://github.com/open-telemetry/opentelemetry-rust/issues/997">this issue&lt;/a> when using the HTTP exporter. In the meantime you have to append &lt;code>/v1/traces&lt;/code> to the URL for both Jaeger and Honeycomb.&amp;#160;&lt;a href="#fnref:8" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&lt;/p>
+&lt;p>The &lt;code>tls&lt;/code> and &lt;code>tls-roots&lt;/code> features need to be enabled on the tonic crate in order to create a connection and validate the server certificate. There are also corresponding features on &lt;code>opentelemetry-otlp&lt;/code> which have the same effect.&amp;#160;&lt;a href="#fnref:8" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&lt;/p>
 &lt;/li>
 &lt;li id="fn:9">
-&lt;p>This is a lie, I used the wrong port number to start with.&amp;#160;&lt;a href="#fnref:9" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&lt;/p>
+&lt;p>Note that you might run into &lt;a href="https://github.com/open-telemetry/opentelemetry-rust/issues/997">this issue&lt;/a> when using the HTTP exporter. In the meantime you have to append &lt;code>/v1/traces&lt;/code> to the URL for both Jaeger and Honeycomb.&amp;#160;&lt;a href="#fnref:9" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&lt;/p>
 &lt;/li>
 &lt;li id="fn:10">
-&lt;p>The &lt;code>0.19&lt;/code> release of &lt;code>opentelemetry-otlp&lt;/code> now &lt;a href="https://github.com/open-telemetry/opentelemetry-rust/pull/945">reports HTTP errors&lt;/a>.&amp;#160;&lt;a href="#fnref:10" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&lt;/p>
+&lt;p>This is a lie, I used the wrong port number to start with 🙂.&amp;#160;&lt;a href="#fnref:10" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&lt;/p>
+&lt;/li>
+&lt;li id="fn:11">
+&lt;p>The &lt;code>0.19&lt;/code> release of &lt;code>opentelemetry-otlp&lt;/code> now &lt;a href="https://github.com/open-telemetry/opentelemetry-rust/pull/945">reports HTTP errors&lt;/a>.&amp;#160;&lt;a href="#fnref:11" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&lt;/p>
 &lt;/li>
 &lt;/ol>
 &lt;/div></description></item><item><title>Checking Password Strength in Elm, Part 2: Have I Been Pwned API</title><link>https://broch.tech/posts/elm-have-i-been-pwned/</link><pubDate>Mon, 05 Mar 2018 00:00:00 +0000</pubDate><guid>https://broch.tech/posts/elm-have-i-been-pwned/</guid><description>&lt;p>In the &lt;a href="https://broch.tech/posts/elm-zxcvbn">Part 1&lt;/a>, we used the Javascript library Zxcvn to check the strength of a password locally. Now we&amp;rsquo;ll extend the code to check the chosen password against the huge database maintained by &lt;a href="https://haveibeenpwned.com">Have I been pwned?&lt;/a>. The code for this part is similar, but instead of decoding the result of a call to Javascript to obtain our data, we make an HTTP request and decode the response.&lt;/p>
