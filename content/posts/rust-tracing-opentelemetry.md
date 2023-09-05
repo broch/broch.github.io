@@ -146,7 +146,13 @@ tracing_subscriber::registry()
 
 We've added `fmt_layer` back in here, so that we get console logging to compare with what we see in Jaeger. We're also using a batch exporter which exports data periodically and is recommended for performance. Apart from that everything is the same.
 
-Now pull the docker image for `jaeger/all-in-one:latest` and run the Jaeger server:
+Now pull the docker image for Jaeger:
+
+```
+$ docker pull jaegertracing/all-in-one:latest
+```
+
+And run the Jaeger server:
 
 ```
 $ docker run -d --name jaeger -e COLLECTOR_OTLP_ENABLED=true -p 16686:16686 -p 4317:4317 -p 4318:4318 jaegertracing/all-in-one:latest
