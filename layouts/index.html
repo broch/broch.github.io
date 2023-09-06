@@ -3,7 +3,6 @@
   <div class="absolute inset-0">
     <div class="h-1/3 sm:h-2/3"></div>
   </div>
-  <div class="relative max-w-7xl mx-auto">
     <div class="text-center">
       <h2 class="text-3xl tracking-tight font-extrabold text-stone-900 dark:text-stone-300 sm:text-4xl">
         Recent blog articles
@@ -16,7 +15,7 @@
 
     {{ range first 6 (where .Site.RegularPages "Section" "posts") }}
 
-      <div class="flex flex-col border rounded-lg dark:border-neutral-900 shadow-lg dark:shadow-none overflow-hidden hover:shadow-xl">
+      <div class="relative flex flex-col border rounded-lg dark:border-neutral-900 shadow-lg dark:shadow-none overflow-hidden hover:shadow-xl">
         <div class="flex-shrink-0 bg-stone-200">
         <a href="{{.Permalink}}">
             <img class="h-60 w-full object-cover" src="{{ .Params.thumb }}" alt="{{ .Params.thumb_alt }}">
@@ -47,26 +46,17 @@
                     {{ .Params.author }}
                 </a>
               </p>
-              <div class="flex  text-sm text-stone-500 dark:text-stone-400">
+              <div class="flex text-sm text-stone-500 dark:text-stone-400">
                 <time datetime="{{.Date.Format "2006-01-02"}}">
                   {{.Date.Format "Jan 2, 2006"}}
                 </time>
-                <!--
-                <span aria-hidden="true">
-                  &middot;
-                </span>
-                <span>
-                </span>
-                -->
               </div>
             </div>
           </div>
         </div>
       </div>
-
     {{ end }}
     </div>
-  </div>
 </div>
 {{ end }}
 
