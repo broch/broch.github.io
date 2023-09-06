@@ -5,7 +5,7 @@ date: 2023-04-06
 description: Exporting traces to Jaeger, Honeycomb and other backends using Rust tracing and OpenTelemetry.
 thumb: /posts/rust-tracing-opentelemetry/rust-otel.webp
 thumb_alt: The OpenTelemetry telescope logo and Ferris, the Rust mascot, superimposed on a Jaeger telemetry trace view
-tags: [rust,tracing,telemetry]
+tags: [Rust,Tracing,Telemetry]
 lastmod: 2023-05-24
 ---
 

@@ -2,7 +2,7 @@
 title: Trying out Rust's Async Functions in Traits
 author: Luke
 date: 2023-08-31
-tags: [rust, async]
+tags: [Rust, Async]
 thumb: /images/rust-logo-280x160.webp
 thumb_alt: The Rust 'R in a sprocket' logo
 description: Exploring the latest Rust nightly features for using async functions in traits

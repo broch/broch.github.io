@@ -5,7 +5,7 @@ date: 2016-05-02
 thumb: /posts/oauth2-openid-connect-haskell/openid-logo.png
 thumb_alt: The OpenID logo
 description: Implementing an OpenID Connect provider in Haskell.
-tags: [haskell,identity,oauth2,openid-connect]
+tags: [Haskell,Identity,OAuth2,OpenID-Connect]
 ---
 
 I've been working for a while on an implementation of the OpenID Connect specification. Since it was something I already knew quite a bit about from my previous job, it seemed like a good idea for a "real-world" Haskell project. The result is a project called "Broch" [^1], which is an OpenID Connect identity provider. Features include

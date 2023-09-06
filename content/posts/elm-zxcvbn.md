@@ -6,7 +6,7 @@ thumb: https://imgs.xkcd.com/comics/password_strength.png
 thumb_alt: The "Correct Horse Battery Staple" password complexity cartoon from xkcd.com
 thumbx: /images/elm-logo.svg
 description: Using the Zxcvbn Javascript library in an Elm application.
-tags: [elm,security,javascript]
+tags: [Elm,Security,Javascript]
 lastmod: 2021-02-25
 ---
 
