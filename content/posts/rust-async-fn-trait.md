@@ -241,6 +241,6 @@ Actix works without any issues though which is a bit confusing since it uses the
 
 What at first seems to be a simple enough idea, can turn out to be, well, not so simple. This has been obvious to the people implementing async Rust for a while but it's less obvious if you're just writing code like me.
 
-So far, I haven't had a use case where I don't want to require the `Send` bound at the trait level, but may want to require it for a specific implementation (which is what the `runtime_type_notation` achieves). It makes sense that there might be cases where this is desirable in a general purpose library.
+So far, I haven't had a use case where I don't want to require the `Send` bound at the trait level, but may want to require it for a specific implementation (which is what the `return_type_notation` achieves). It makes sense that there might be cases where this is desirable in a general purpose library.
 
 Hopefully in a future Rust version it will be just as easy to turn the `Send` bound on or off for our trait methods as it is with `async-trait`. For now though, sticking with the `async-trait` macros is still the simplest option.
