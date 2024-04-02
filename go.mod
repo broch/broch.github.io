@@ -4,4 +4,4 @@ module broch.tech
 
 go 1.21.0
 
-require github.com/broch/broch-theme v0.0.0-20240113001957-f4ff8db8a03f // indirect
+require github.com/broch/broch-theme v0.0.0-20240402170332-d060decfeeb8 // indirect
