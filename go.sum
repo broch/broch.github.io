@@ -1,2 +1,4 @@
-github.com/broch/broch-theme v0.0.0-20240402170332-d060decfeeb8 h1:LNkuhzCqHekSLTbAEx7Gf++BvpBBe1HcRbluLYXdY0U=
-github.com/broch/broch-theme v0.0.0-20240402170332-d060decfeeb8/go.mod h1:sgAKWegkuqTEUKuA2KMaxg93EH+OS/RQb4/HQ+xDijs=
+github.com/broch/broch-theme v0.0.0-20240402183751-f6a67728c343 h1:oSbUBYhVzkVj0efWTtIfxgeNCO9b3Tw0hYrLuJSiudE=
+github.com/broch/broch-theme v0.0.0-20240402183751-f6a67728c343/go.mod h1:sgAKWegkuqTEUKuA2KMaxg93EH+OS/RQb4/HQ+xDijs=
+github.com/broch/broch-theme v0.0.0-20260215230743-33fb82ff96e9 h1:aUKVpY85q/8zUbXEM8tq0MXm6zJbCCjKnUqQWacwdcI=
+github.com/broch/broch-theme v0.0.0-20260215230743-33fb82ff96e9/go.mod h1:sgAKWegkuqTEUKuA2KMaxg93EH+OS/RQb4/HQ+xDijs=

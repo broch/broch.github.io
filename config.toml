@@ -34,6 +34,7 @@ sectionPagesMenu = "main"
     source = "hugo_stats.json"
     target = "assets/watching/hugo_stats.json"
   [[module.imports]]
+    # path = "/home/tekul/code/broch-theme"
     path = 'github.com/broch/broch-theme'
 
 
